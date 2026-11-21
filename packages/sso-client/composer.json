@@ -1,0 +1,41 @@
+{
+    "name": "tahir242/sso-client",
+    "description": "PHP client for the SSO OpenID Connect provider: one-line page gate, login, single logout, back-channel logout and API calls.",
+    "type": "library",
+    "version": "1.2.1",
+    "license": "MIT",
+    "require": {
+        "php": "^8.1",
+        "ext-curl": "*",
+        "ext-json": "*",
+        "ext-openssl": "*",
+        "firebase/php-jwt": "^6.10 || ^7.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "SsoClient\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "SsoClient\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "platform": {
+            "php": "8.1.0"
+        },
+        "sort-packages": true
+    },
+    "keywords": [
+        "sso",
+        "openid-connect",
+        "oidc",
+        "oauth2",
+        "pkce"
+    ],
+    "homepage": "https://github.com/tahir242/sso/tree/main/packages/sso-client"
+}

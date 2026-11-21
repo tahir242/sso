@@ -1,0 +1,64 @@
+name: Bug report
+description: Something does not work as expected.
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! **Security problems must not be reported here**: see SECURITY.md.
+        Please remove passwords, secrets, tokens and personal data from logs and screenshots.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Release (see RELEASE.txt in the install folder) or commit.
+      placeholder: v1.0.0
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Sign-in / two-step verification
+        - OpenID Connect / connected application
+        - Admin console
+        - Staff portal (requests, helpdesk, account)
+        - Notifications
+        - Installation / update / scheduled task
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to ...
+        2. Click ...
+        3. See error ...
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Output of `php artisan sso:check` helps a lot.
+      placeholder: |
+        OS: Windows Server 2022
+        PHP: 8.4.x
+        SQL Server: 2019
+        Browser: Edge 131
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Relevant lines from storage/logs (secrets removed).
+      render: text

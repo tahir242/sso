@@ -1,0 +1,70 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    name: Build and publish
+    needs: ci
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, intl, gd, zip, fileinfo, ldap, sodium, bcmath, exif, curl, openssl
+          coverage: none
+          tools: composer:v2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Build the release zip
+        shell: pwsh
+        run: ./deploy/build-release.ps1 -Version '${{ github.ref_name }}' -Output "$env:RUNNER_TEMP\sso-release"
+
+      - name: Checksum and release notes
+        shell: pwsh
+        run: |
+          $version = '${{ github.ref_name }}'
+          $zip = Join-Path $env:RUNNER_TEMP "sso-$version.zip"
+          $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
+          "$hash  sso-$version.zip" | Set-Content -NoNewline -Encoding ascii "$zip.sha256"
+
+          # The CHANGELOG.md section for this version becomes the release notes.
+          $number = $version.TrimStart('v')
+          $lines = Get-Content CHANGELOG.md
+          $start = ($lines | Select-String -Pattern "^## \[$([regex]::Escape($number))\]").LineNumber
+          $notes = if ($start) {
+              $rest = $lines[$start..($lines.Count - 1)]
+              $end = ($rest | Select-String -Pattern '^## \[|^\[.+\]: ' | Select-Object -First 1).LineNumber
+              if ($end) { $rest[0..($end - 2)] } else { $rest }
+          } else { @('See CHANGELOG.md.') }
+          $notes += '', '### Install', '', "Download ``sso-$version.zip``, then follow [docs/deployment.md](https://github.com/${{ github.repository }}/blob/$version/docs/deployment.md): ``deploy\install.cmd`` for a first installation, ``deploy\update.cmd <zip>`` for an update.", '', "SHA-256: ``$hash``"
+          $notes -join "`n" | Set-Content -Encoding utf8 "$env:RUNNER_TEMP\notes.md"
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          body_path: ${{ runner.temp }}/notes.md
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          files: |
+            ${{ runner.temp }}/sso-${{ github.ref_name }}.zip
+            ${{ runner.temp }}/sso-${{ github.ref_name }}.zip.sha256

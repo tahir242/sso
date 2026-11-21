@@ -1,0 +1,14 @@
+{{-- Built-in SSO mark (same artwork as public/favicon.svg): used when no logo is uploaded. --}}
+@php($gradient = 'brand-mark-'.\Illuminate\Support\Str::random(6))
+<svg {{ $attributes }} viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="{{ config('app.name') }}">
+    <defs>
+        <linearGradient id="{{ $gradient }}" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#d10f0f" />
+            <stop offset="1" stop-color="#6e0303" />
+        </linearGradient>
+    </defs>
+    <rect width="64" height="64" rx="14" fill="url(#{{ $gradient }})" />
+    <path d="M32 11 48 17v13c0 11-7 19-16 24-9-5-16-13-16-24V17Z" fill="#fff" />
+    <circle cx="32" cy="28.5" r="5.5" fill="#a80202" />
+    <path d="M29.2 31h5.6l1.4 12h-8.4Z" fill="#a80202" />
+</svg>

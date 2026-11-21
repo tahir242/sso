@@ -1,0 +1,32 @@
+version: 2
+updates:
+  - package-ecosystem: composer
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      laravel-and-filament:
+        patterns: ["laravel/*", "filament/*", "livewire/*"]
+      spatie:
+        patterns: ["spatie/*"]
+      dev-tools:
+        dependency-type: development
+    open-pull-requests-limit: 10
+
+  - package-ecosystem: composer
+    directory: /packages/sso-client
+    schedule:
+      interval: monthly
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      frontend:
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
