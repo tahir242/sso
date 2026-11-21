@@ -69,7 +69,8 @@ it('refuses an Active Directory account that does not exist in AD', function () 
 it('fills an Active Directory account from AD when it is created', function () {
     fakeActiveDirectory();
     adPerson();
-    $this->actingAs(superAdmin());
+    // A fixed name: a random one with the initials "SM" would push Sana Mirza to "SMI".
+    $this->actingAs(superAdmin(['name' => 'Admin Person']));
 
     Livewire::test(CreateUser::class)
         ->fillForm(['auth_source' => AuthSource::ActiveDirectory->value])

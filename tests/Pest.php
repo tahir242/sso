@@ -73,9 +73,9 @@ function treatEveryoneAsOffNetwork(): void
     $settings->save();
 }
 
-function superAdmin(): User
+function superAdmin(array $attributes = []): User
 {
-    return tap(User::factory()->create(), fn (User $u) => $u->assignRole(Role::findOrCreate('super-admin', 'web')));
+    return tap(User::factory()->create($attributes), fn (User $u) => $u->assignRole(Role::findOrCreate('super-admin', 'web')));
 }
 
 function makeApp(string $name, ?User $owner = null): Application
