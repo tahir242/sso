@@ -5,7 +5,7 @@
         <div class="absolute inset-0 bg-dots text-white/[0.07]" aria-hidden="true"></div>
         <div class="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
             <div class="flex items-center gap-4">
-                <x-avatar :initials="\App\Domain\Identity\Auth\RecentAccounts::initials($user->name ?: $user->username)" color="from-white/30 to-white/10" size="size-14 text-lg" class="!ring-white/30 backdrop-blur" />
+                <x-avatar :initials="\App\Domain\Identity\Auth\RecentAccounts::initials($user->name ?: $user->username)" :src="\App\Domain\Identity\Support\ProfilePhoto::url($user)" color="from-white/30 to-white/10" size="size-14 text-lg" class="!ring-white/30 backdrop-blur" />
                 <div>
                     <p class="text-sm font-medium text-primary-100">{{ now()->hour < 12 ? 'Good morning' : (now()->hour < 17 ? 'Good afternoon' : 'Good evening') }}</p>
                     <h1 class="text-2xl font-semibold tracking-tight sm:text-3xl">{{ $user->name }}</h1>

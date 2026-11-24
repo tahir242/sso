@@ -35,7 +35,8 @@ class DiscoveryController
             'acr_values_supported' => [Issuer::ACR_PASSWORD, Issuer::ACR_MFA],
             'claims_supported' => [
                 'sub', 'iss', 'aud', 'exp', 'iat', 'auth_time', 'nonce', 'sid', 'amr', 'acr',
-                'name', 'given_name', 'family_name', 'preferred_username', 'updated_at', 'email', 'email_verified',
+                'name', 'given_name', 'middle_name', 'family_name', 'nickname', 'preferred_username', 'picture', 'gender', 'birthdate', 'zoneinfo', 'locale', 'updated_at',
+                'email', 'email_verified', 'phone_number', 'phone_number_verified', 'address',
                 'user_id', 'emp_id', 'emp_initial', 'department', 'designation', 'roles', 'applications',
             ],
             'claims_parameter_supported' => false,

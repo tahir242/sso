@@ -5,6 +5,8 @@ namespace App\Domain\Federation\Oidc;
 use App\Domain\Federation\ApiScopes;
 use App\Domain\Federation\Models\Application;
 use App\Domain\Identity\Models\User;
+use App\Domain\Identity\Support\ProfilePhoto;
+use App\Domain\Settings\GeneralSettings;
 
 /**
  * Which user claims each scope releases. Clients only receive what they ask
@@ -17,6 +19,8 @@ final class Claims
         'openid' => 'Sign you in',
         'profile' => 'Your name and username',
         'email' => 'Your email address',
+        'phone' => 'Your phone number',
+        'address' => 'Your postal address',
         'employee' => 'Your employee ID, department and designation',
         'roles' => 'Your roles in this application',
         'applications' => 'The applications you can open and your roles in them',
@@ -37,17 +41,36 @@ final class Claims
     {
         $claims = [];
 
+        // Standard claims (OpenID Connect Core 1.0, section 5.1), each from its
+        // own profile field. Empty fields are left out.
         if (in_array('profile', $scopes, true)) {
             $claims['name'] = $user->name;
-            // given/family names (standard OIDC) for products that need them separately, e.g. Koha and Moodle.
-            [$claims['given_name'], $claims['family_name']] = self::splitName((string) $user->name);
+            $claims['given_name'] = $user->given_name;
+            $claims['middle_name'] = $user->middle_name;
+            $claims['family_name'] = $user->family_name;
+            $claims['nickname'] = $user->nickname;
             $claims['preferred_username'] = $user->username;
+            $claims['picture'] = ProfilePhoto::url($user);
+            $claims['gender'] = $user->oidcGender();
+            $claims['birthdate'] = $user->dob?->format('Y-m-d');
+            // Organisation-wide values: everyone works in the same time zone and language.
+            $claims['zoneinfo'] = app(GeneralSettings::class)->timezone;
+            $claims['locale'] = str_replace('_', '-', (string) config('app.locale'));
             $claims['updated_at'] = $user->updated_at?->getTimestamp();
         }
 
         if (in_array('email', $scopes, true)) {
             $claims['email'] = $user->email;
             $claims['email_verified'] = false;
+        }
+
+        if (in_array('phone', $scopes, true) && filled($user->mobile)) {
+            $claims['phone_number'] = $user->mobile;
+            $claims['phone_number_verified'] = false;
+        }
+
+        if (in_array('address', $scopes, true)) {
+            $claims['address'] = self::address($user);
         }
 
         if (in_array('employee', $scopes, true)) {
@@ -73,18 +96,31 @@ final class Claims
                 ->values()->all();
         }
 
-        return array_filter($claims, fn ($value) => $value !== null);
+        return array_filter($claims, fn ($value) => $value !== null && $value !== '');
     }
 
     /**
-     * "Muhammad Ali Khan" -> ["Muhammad", "Ali Khan"]; a single name is the given name.
+     * The OIDC `address` claim (a JSON object), or null when no part is set.
      *
-     * @return array{0: ?string, 1: ?string}
+     * @return array<string, string>|null
      */
-    public static function splitName(string $name): array
+    public static function address(User $user): ?array
     {
-        $parts = preg_split('/\s+/', trim($name), 2) ?: [];
+        $parts = array_filter([
+            'street_address' => $user->street_address,
+            'locality' => $user->locality,
+            'region' => $user->region,
+            'postal_code' => $user->postal_code,
+            'country' => $user->country,
+        ], fn ($value) => filled($value));
 
-        return [($parts[0] ?? '') ?: null, ($parts[1] ?? '') ?: null];
+        if ($parts === []) {
+            return null;
+        }
+
+        // "formatted": street on the first line, then "locality region postal_code", then country.
+        $cityLine = trim(implode(' ', array_filter([$parts['locality'] ?? null, $parts['region'] ?? null, $parts['postal_code'] ?? null])));
+
+        return ['formatted' => implode("\n", array_filter([$parts['street_address'] ?? null, $cityLine, $parts['country'] ?? null])), ...$parts];
     }
 }

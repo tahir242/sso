@@ -9,7 +9,9 @@ use App\Domain\Federation\Oidc\SigningKeys;
 use App\Domain\Identity\Actions\CompleteLogin;
 use App\Domain\Identity\Enums\UserStatus;
 use App\Domain\Identity\Models\User;
+use App\Domain\Identity\Support\ProfilePhoto;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Lcobucci\JWT\UnencryptedToken;
@@ -361,15 +363,79 @@ it('keeps PKCE mandatory unless a confidential client is explicitly exempted', f
         ->assertStatus(400);
 });
 
-it('sends given and family names for products that need them', function () {
-    expect(Claims::splitName('Muhammad Ali Khan'))->toBe(['Muhammad', 'Ali Khan'])
-        ->and(Claims::splitName('Ayesha'))->toBe(['Ayesha', null]);
-
+it('sends the OpenID Connect standard profile claims from the stored name parts', function () {
     [$app] = registerApp();
-    $user = User::factory()->create(['name' => 'Sara Ahmed Qureshi']);
+    $user = User::factory()->create([
+        'name' => 'Dr. Sara Ahmed Qureshi', 'given_name' => 'Sara', 'middle_name' => 'Ahmed', 'family_name' => 'Qureshi',
+        'nickname' => 'Sara', 'gender' => 'F', 'dob' => '1990-04-05',
+    ]);
 
     expect(app(Claims::class)->for($user, $app, ['openid', 'profile']))
-        ->toMatchArray(['given_name' => 'Sara', 'family_name' => 'Ahmed Qureshi']);
+        ->toMatchArray([
+            'name' => 'Dr. Sara Ahmed Qureshi', 'given_name' => 'Sara', 'middle_name' => 'Ahmed', 'family_name' => 'Qureshi',
+            'nickname' => 'Sara', 'gender' => 'female', 'birthdate' => '1990-04-05', 'preferred_username' => $user->username,
+        ]);
+});
+
+it('fills in the full name or its parts when only one is given', function () {
+    expect(User::factory()->create(['name' => null, 'given_name' => 'Jane', 'middle_name' => 'Ann', 'family_name' => 'Doe'])->name)
+        ->toBe('Jane Ann Doe');
+
+    $fromFullName = User::factory()->create(['name' => 'Muhammad Ali Khan']);
+    expect([$fromFullName->given_name, $fromFullName->family_name])->toBe(['Muhammad', 'Ali Khan']);
+});
+
+it('sends phone and address claims only for their scopes', function () {
+    [$app] = registerApp();
+    $user = User::factory()->create([
+        'mobile' => '+92 300 1234567', 'street_address' => 'Civil Hospital Road', 'locality' => 'Karachi',
+        'region' => 'Sindh', 'postal_code' => '74200', 'country' => 'Pakistan',
+    ]);
+
+    expect(app(Claims::class)->for($user, $app, ['openid', 'profile']))->not->toHaveKeys(['phone_number', 'address']);
+
+    $claims = app(Claims::class)->for($user, $app, ['openid', 'phone', 'address']);
+
+    expect($claims['phone_number'])->toBe('+92 300 1234567')
+        ->and($claims['phone_number_verified'])->toBeFalse()
+        ->and($claims['address'])->toBe([
+            'formatted' => "Civil Hospital Road\nKarachi Sindh 74200\nPakistan",
+            'street_address' => 'Civil Hospital Road', 'locality' => 'Karachi', 'region' => 'Sindh',
+            'postal_code' => '74200', 'country' => 'Pakistan',
+        ]);
+});
+
+it('sends the profile photo as an absolute picture URL that serves the image', function () {
+    Storage::fake(ProfilePhoto::DISK);
+    Storage::disk(ProfilePhoto::DISK)->put('profile-photos/abc.png', base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='));
+
+    [$app] = registerApp();
+    $user = User::factory()->create(['picture' => 'profile-photos/abc.png']);
+    $claims = app(Claims::class)->for($user, $app, ['openid', 'profile']);
+
+    expect($claims['picture'])->toStartWith('http')->toContain($user->ulid)
+        ->and($claims)->toHaveKeys(['zoneinfo', 'locale']);
+
+    $this->get($claims['picture'])->assertOk()->assertHeader('Content-Type', 'image/png');
+    // An old version (replaced photo) is not cached.
+    expect($this->get(route('users.picture', ['user' => $user->ulid, 'version' => 'abc']))->assertOk()->headers->get('Cache-Control'))->toContain('no-store');
+
+    // No photo: no claim, and the address answers 404.
+    $other = User::factory()->create();
+    expect(app(Claims::class)->for($other, $app, ['openid', 'profile']))->not->toHaveKey('picture');
+    $this->get(route('users.picture', ['user' => $other->ulid, 'version' => 'abc']))->assertNotFound();
+
+    // Replacing the photo deletes the old file.
+    $user->update(['picture' => null]);
+    Storage::disk(ProfilePhoto::DISK)->assertMissing('profile-photos/abc.png');
+});
+
+it('keeps the employee claims unchanged', function () {
+    [$app] = registerApp();
+    $user = User::factory()->create(['emp_id' => 'E1234', 'emp_initial' => 'SAQ']);
+
+    expect(app(Claims::class)->for($user, $app, ['openid', 'employee']))
+        ->toMatchArray(['emp_id' => 'E1234', 'emp_initial' => 'SAQ', 'user_id' => $user->getKey()]);
 });
 
 it('lists the applications a user can open only for clients allowed to read assignments', function () {

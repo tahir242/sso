@@ -6,6 +6,7 @@ use App\Http\Controllers\BrandingLogoController;
 use App\Http\Controllers\EntryPointController;
 use App\Http\Controllers\HelpController;
 use App\Http\Controllers\MediaController;
+use App\Http\Controllers\ProfilePhotoController;
 use App\Http\Middleware\EnsureEmailAddress;
 use App\Livewire\Access\Approvals;
 use App\Livewire\Access\MyRequests;
@@ -45,6 +46,11 @@ Route::get('/help', HelpController::class)->name('help');
 Route::get('/branding/logo/{version}', BrandingLogoController::class)
     ->where('version', '[a-f0-9]{1,40}')
     ->name('branding.logo');
+
+// Profile photos: the OpenID Connect `picture` claim, shown by client applications.
+Route::get('/users/{user}/picture/{version}', ProfilePhotoController::class)
+    ->where(['user' => '[0-9A-Za-z]{26}', 'version' => '[a-f0-9]{1,40}'])
+    ->name('users.picture');
 
 Route::middleware('guest')->group(function () {
     Route::livewire('/login', Login::class)->name('login');

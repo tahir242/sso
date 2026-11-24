@@ -42,8 +42,10 @@ Ask only for the scopes you need. Claims come in the ID token (and from the user
 | Scope | Claims | Notes |
 |---|---|---|
 | `openid` | `sub`, `sid`, `amr`, `acr`, `auth_time` | `sub` is permanent and unique. `sid` identifies the SSO session (used by back-channel logout). `acr` is `urn:sso:acr:mfa` after two-step verification. |
-| `profile` | `name`, `preferred_username`, `updated_at` | `preferred_username` is the Windows logon name for staff. |
+| `profile` | `name`, `given_name`, `middle_name`, `family_name`, `nickname`, `preferred_username`, `picture`, `gender`, `birthdate`, `zoneinfo`, `locale`, `updated_at` | Standard OpenID Connect claims, each from its own field on the user form. `name` is the first, middle and last name together. `preferred_username` is the Windows logon name for staff. `picture` is the address of the profile photo. `gender` is `female`, `male` or `other`; `birthdate` is `YYYY-MM-DD`. `zoneinfo` and `locale` are the organisation's time zone and language. Empty fields are left out. |
 | `email` | `email`, `email_verified` | `email_verified` is always `false`; don't use email as a login key. |
+| `phone` | `phone_number`, `phone_number_verified` | The user's mobile number. `phone_number_verified` is always `false`. |
+| `address` | `address` | A JSON object with `formatted`, `street_address`, `locality`, `region`, `postal_code` and `country`. |
 | `employee` | `user_id`, `emp_id`, `emp_initial`, `department`, `designation` | `user_id` is the number the old SSO called **UserID**; existing applications can keep using it in their own tables. |
 | `roles` | `roles` | List of **this application's** role keys, e.g. `["clerk", "approver"]`. Never another application's roles. |
 

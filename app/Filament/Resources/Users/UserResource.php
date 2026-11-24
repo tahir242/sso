@@ -10,6 +10,7 @@ use App\Domain\Identity\Models\Department;
 use App\Domain\Identity\Models\Location;
 use App\Domain\Identity\Models\User;
 use App\Domain\Identity\Support\EmployeeInitials;
+use App\Domain\Identity\Support\ProfilePhoto;
 use App\Domain\Settings\SecuritySettings;
 use App\Filament\Forms\Components\ApplicationPicker;
 use App\Filament\Resources\Users\Pages\CreateUser;
@@ -19,11 +20,16 @@ use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\BaseFileUpload;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\ToggleButtons;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
@@ -82,20 +88,25 @@ class UserResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make('Identity')
-                ->description('Choose how the person signs in first. For an Active Directory account, type the Windows username and the details are filled in from AD.')
-                ->columns(2)
+            Section::make('Account')
+                ->description('How this person signs in, and their employee identifiers.')
+                ->icon(Heroicon::OutlinedKey)
+                ->columns(['default' => 1, 'md' => 6])
                 ->columnSpanFull()
                 ->schema([
                     ToggleButtons::make('auth_source')->label('Password source')->options(AuthSource::class)
                         ->default(AuthSource::Local)->required()->inline()->live()->columnSpanFull()
                         ->afterStateUpdated(fn (Get $get, Set $set) => self::fillFromDirectory($get, $set))
                         ->helperText(fn (Get $get, string $operation, ?User $record) => self::isLocal($get('auth_source'))
-                            ? 'local account with its own password (consultants, vendors, people without a Windows account).'
+                            ? 'Signs in with a password kept in SSO (consultants, vendors, people without a Windows account).'
                             : ($operation === 'edit' && $record?->auth_source === AuthSource::Local
-                                ? 'Saving switches this person to their Windows password; their details are then updated from Active Directory and the local password is removed.'
-                                : 'Signs in with the Windows password; name, email, department and job title come from Active Directory.')),
+                                ? 'Saving switches this person to their Windows password and updates their details from Active Directory.'
+                                : 'Signs in with the Windows password. Type the username and the details are filled in from Active Directory.')),
                     TextInput::make('username')->required()->maxLength(100)->unique(ignoreRecord: true)
+                        ->prefixIcon(Heroicon::OutlinedAtSymbol)
+                        ->placeholder('e.g. ahmed.khan')
+                        ->autocomplete(false)
+                        ->hintIcon(Heroicon::OutlinedInformationCircle, tooltip: 'For Active Directory accounts: the Windows logon name.')->hintColor('gray')
                         ->validationMessages(['unique' => 'This username already belongs to another SSO account.'])
                         ->live(onBlur: true)
                         ->afterStateUpdated(fn (Get $get, Set $set) => self::fillFromDirectory($get, $set))
@@ -104,12 +115,20 @@ class UserResource extends Resource
                             if ($message = self::usernameProblem((string) $value, $get('auth_source'), $record)) {
                                 $fail($message);
                             }
-                        }]),
+                        }])
+                        ->columnSpan(['default' => 1, 'md' => 3]),
                     TextInput::make('emp_id')->label('Employee ID')->maxLength(30)->unique(ignoreRecord: true)
-                        ->validationMessages(['unique' => 'This Employee ID already belongs to another SSO account.']),
-                    TextInput::make('emp_initial')->label('Employee initials')->maxLength(EmployeeInitials::MAX)
-                        ->placeholder(fn (Get $get, ?User $record) => filled($get('name')) ? EmployeeInitials::generate((string) $get('name'), $record?->getKey()) : 'Generated from the name')
-                        ->helperText('Leave empty to generate them from the name (unique, e.g. Jane Ann Doe → JAD).')
+                        ->prefixIcon(Heroicon::OutlinedIdentification)
+                        ->placeholder('e.g. 30111')
+                        ->autocomplete(false)
+                        ->validationMessages(['unique' => 'This Employee ID already belongs to another SSO account.'])
+                        ->columnSpan(['default' => 1, 'md' => 2]),
+                    TextInput::make('emp_initial')->label('Initials')->maxLength(EmployeeInitials::MAX)
+                        ->placeholder(fn (Get $get, ?User $record) => filled($get('name')) ? EmployeeInitials::generate((string) $get('name'), $record?->getKey()) : 'Auto')
+                        ->hintIcon(Heroicon::OutlinedInformationCircle, tooltip: 'Leave empty to generate unique initials from the name (Jane Ann Doe → JAD).')->hintColor('gray')
+                        ->autocomplete(false)
+                        ->extraInputAttributes(['class' => 'uppercase font-mono tracking-widest text-center'])
+                        ->columnSpan(['default' => 1, 'md' => 1])
                         ->dehydrateStateUsing(fn (?string $state) => filled($state) ? mb_strtoupper(trim($state)) : null)
                         ->rules([fn (?User $record) => function (string $attribute, $value, \Closure $fail) use ($record): void {
                             $value = mb_strtoupper(trim((string) $value));
@@ -118,20 +137,86 @@ class UserResource extends Resource
                                 $fail('These initials already belong to another person. Leave the field empty to generate unique initials.');
                             }
                         }]),
-                    TextInput::make('name')->required()->maxLength(150)->live(onBlur: true),
+                ]),
+            // OpenID Connect standard profile claims (picture, given_name,
+            // middle_name, family_name, nickname, gender, birthdate). The full
+            // name (claim `name`) is always built from the name parts.
+            Section::make('Personal details')
+                ->icon(Heroicon::OutlinedUser)
+                ->columns(['default' => 1, 'md' => 4])
+                ->columnSpanFull()
+                ->schema([
+                    FileUpload::make('picture')->label('Photo')
+                        ->avatar()
+                        ->imageEditor()->circleCropper()
+                        ->automaticallyResizeImagesToWidth((string) ProfilePhoto::SIZE)
+                        ->automaticallyResizeImagesToHeight((string) ProfilePhoto::SIZE)
+                        ->disk(ProfilePhoto::DISK)
+                        ->directory(ProfilePhoto::DIRECTORY)
+                        ->visibility('private')
+                        ->acceptedFileTypes(array_values(array_unique(ProfilePhoto::TYPES)))
+                        ->maxSize(ProfilePhoto::MAX_KILOBYTES)
+                        ->alignCenter()
+                        // Label centred over the round drop area (resources/css/filament/admin/theme.css).
+                        ->extraFieldWrapperAttributes(['class' => 'sso-photo-field'])
+                        // Shown inside the round drop area (FilePond renders it as HTML).
+                        ->placeholder('Drop a photo or <span class="filepond--label-action">Browse</span><br><span style="font-size:.75em;opacity:.7">JPG, PNG or WebP</span>')
+                        // Preview through the same address applications use.
+                        ->getUploadedFileUsing(function (BaseFileUpload $component, string $file, string|array|null $storedFileNames, ?User $record): ?array {
+                            $info = $component->getUploadedFile($file, $storedFileNames);
+
+                            return $info && $record && $record->picture === $file
+                                ? ['url' => ProfilePhoto::url($record), 'type' => ProfilePhoto::contentType($file)] + $info
+                                : $info;
+                        }),
+                    Group::make([
+                        TextInput::make('given_name')->label('First name')->required()->maxLength(100)
+                            ->live(onBlur: true)->afterStateUpdated(fn (Get $get, Set $set) => self::composeFullName($get, $set)),
+                        TextInput::make('middle_name')->label('Middle name')->maxLength(100)
+                            ->live(onBlur: true)->afterStateUpdated(fn (Get $get, Set $set) => self::composeFullName($get, $set)),
+                        TextInput::make('family_name')->label('Last name')->maxLength(100)
+                            ->live(onBlur: true)->afterStateUpdated(fn (Get $get, Set $set) => self::composeFullName($get, $set)),
+                        TextInput::make('nickname')->label('Known as')->maxLength(100)->placeholder('Optional'),
+                        Select::make('gender')->options(User::GENDERS)
+                            ->formatStateUsing(fn (?User $record, ?string $state) => $record?->oidcGender() ?? $state),
+                        DatePicker::make('dob')->label('Date of birth')->native(false)->maxDate(now()),
+                        Hidden::make('name')
+                            ->dehydrateStateUsing(fn (Get $get, ?string $state) => User::composeName($get('given_name'), $get('middle_name'), $get('family_name')) ?: $state),
+                    ])->columns(['default' => 1, 'sm' => 3])->columnSpan(['default' => 1, 'md' => 3]),
+                ]),
+            Section::make('Contact and work')
+                ->icon(Heroicon::OutlinedBriefcase)
+                ->columns(2)
+                ->columnSpanFull()
+                ->schema([
                     TextInput::make('email')->label('Email address')->email()->required()->maxLength(191)
                         ->unique(ignoreRecord: true)
                         ->validationMessages(['unique' => 'This email address already belongs to another SSO account.'])
                         ->rule('email:rfc')
                         ->dehydrateStateUsing(fn (?string $state) => $state ? mb_strtolower(trim($state)) : $state)
                         ->helperText('Required: used for password recovery and security notifications.'),
-                    TextInput::make('mobile')->tel()->maxLength(30),
+                    TextInput::make('mobile')->label('Phone number')->tel()->maxLength(30)
+                        ->helperText('Mobile number, e.g. +92 300 1234567. Also used for WhatsApp notifications.'),
                     TextInput::make('designation')->maxLength(150),
                     Select::make('department_id')->relationship('department', 'name')->searchable()->preload(),
                     Select::make('location_id')->label('Location')
                         ->options(fn () => Location::paths())
                         ->searchable()
                         ->helperText('Where the user sits (room or workstation). Manage places in Identity → Locations.'),
+                ]),
+            Section::make('Address')
+                ->description('Postal address (OpenID Connect `address` claim). Only sent to applications that ask for the address scope.')
+                ->icon(Heroicon::OutlinedMapPin)
+                ->columns(2)
+                ->columnSpanFull()
+                ->collapsible()
+                ->collapsed(fn (?User $record) => blank($record?->street_address) && blank($record?->locality))
+                ->schema([
+                    TextInput::make('street_address')->label('Street address')->maxLength(255)->columnSpanFull(),
+                    TextInput::make('locality')->label('City')->maxLength(100),
+                    TextInput::make('region')->label('Province / state')->maxLength(100),
+                    TextInput::make('postal_code')->label('Postal code')->maxLength(20),
+                    TextInput::make('country')->maxLength(100),
                 ]),
             Section::make('Applications')
                 ->description('Applications this user can open. Applications open to everyone are always available and need no selection.')
@@ -265,6 +350,18 @@ class UserResource extends Resource
         }
 
         $set('name', $ad['name']);
+
+        // Name parts from AD's givenName / middleName / sn; if AD has none, a
+        // starting point from the display name that the administrator can correct.
+        $given = $ad['given_name'] ?? null;
+        $family = $ad['family_name'] ?? null;
+        if (blank($given) && blank($family)) {
+            [$given, $family] = array_pad(preg_split('/\s+/', trim((string) $ad['name']), 2) ?: [], 2, null);
+        }
+        $set('given_name', $given);
+        $set('middle_name', $ad['middle_name'] ?? null);
+        $set('family_name', $family);
+
         foreach (['email' => $ad['email'], 'emp_id' => $ad['emp_id'], 'designation' => $ad['title'], 'mobile' => $ad['mobile']] as $field => $value) {
             if (filled($value)) {
                 $set($field, $value);
@@ -276,13 +373,33 @@ class UserResource extends Resource
         }
     }
 
-    private static function usernameHint(?string $username, mixed $source, ?User $record): string|HtmlString
+    /**
+     * Rebuilds the full name when a name part changes.
+     */
+    private static function composeFullName(Get $get, Set $set): void
+    {
+        $name = User::composeName($get('given_name'), $get('middle_name'), $get('family_name'));
+
+        if ($name !== '') {
+            $set('name', $name);
+        }
+    }
+
+    /**
+     * What Active Directory says about the typed username. Nothing when there
+     * is nothing useful to say (empty field, or a local account AD does not know).
+     */
+    private static function usernameHint(?string $username, mixed $source, ?User $record): string|HtmlString|null
     {
         if (blank($username)) {
-            return 'For Active Directory accounts: the Windows logon name, e.g. ahmed.khan.';
+            return null;
         }
 
         $ad = app(DirectoryLookup::class)->username($username);
+
+        if (self::isLocal($source) && in_array($ad['status'], ['off', 'missing'], true)) {
+            return null;
+        }
 
         return match ($ad['status']) {
             'off' => self::isLocal($source) ? 'Active Directory is not switched on, so it is not checked.' : 'Turn on Active Directory sign-in (Settings → Active Directory) to use AD accounts.',

@@ -16,7 +16,7 @@ it('requires an email address when an administrator creates a user', function ()
     $this->actingAs(superAdmin());
 
     Livewire::test(CreateUser::class)
-        ->fillForm(['username' => 'new.user', 'name' => 'New User', 'auth_source' => 'local', 'status' => 'active', 'password' => 'Passw0rd-Strong-1', 'email' => ''])
+        ->fillForm(['username' => 'new.user', 'given_name' => 'New', 'family_name' => 'User', 'auth_source' => 'local', 'status' => 'active', 'password' => 'Passw0rd-Strong-1', 'email' => ''])
         ->call('create')
         ->assertHasFormErrors(['email' => 'required']);
 });
@@ -28,7 +28,7 @@ it('gives and removes application access from the user form', function () {
 
     Livewire::test(CreateUser::class)
         ->fillForm([
-            'username' => 'sara.ali', 'name' => 'Sara Ali', 'email' => 'sara.ali@example.test',
+            'username' => 'sara.ali', 'given_name' => 'Sara', 'family_name' => 'Ali', 'email' => 'sara.ali@example.test',
             'auth_source' => 'local', 'status' => 'active', 'password' => 'Passw0rd-Strong-1',
             'application_ids' => [$hr->id, $ot->id],
         ])

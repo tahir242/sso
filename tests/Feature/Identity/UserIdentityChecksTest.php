@@ -51,7 +51,7 @@ it('refuses a local account whose username belongs to someone in Active Director
     $this->actingAs(superAdmin());
 
     Livewire::test(CreateUser::class)
-        ->fillForm(['auth_source' => AuthSource::Local->value, 'username' => 'sana.mirza', 'name' => 'Sana', 'email' => 'x@example.test', 'password' => 'Very-Strong-Pass-123'])
+        ->fillForm(['auth_source' => AuthSource::Local->value, 'username' => 'sana.mirza', 'given_name' => 'Sana', 'email' => 'x@example.test', 'password' => 'Very-Strong-Pass-123'])
         ->call('create')
         ->assertHasFormErrors(['username']);
 });
@@ -61,7 +61,7 @@ it('refuses an Active Directory account that does not exist in AD', function () 
     $this->actingAs(superAdmin());
 
     Livewire::test(CreateUser::class)
-        ->fillForm(['auth_source' => AuthSource::ActiveDirectory->value, 'username' => 'nobody.here', 'name' => 'Nobody', 'email' => 'n@example.test'])
+        ->fillForm(['auth_source' => AuthSource::ActiveDirectory->value, 'username' => 'nobody.here', 'given_name' => 'Nobody', 'email' => 'n@example.test'])
         ->call('create')
         ->assertHasFormErrors(['username']);
 });
@@ -75,7 +75,7 @@ it('fills an Active Directory account from AD when it is created', function () {
     Livewire::test(CreateUser::class)
         ->fillForm(['auth_source' => AuthSource::ActiveDirectory->value])
         ->fillForm(['username' => 'sana.mirza'])
-        ->assertSchemaStateSet(['name' => 'Sana Mirza', 'email' => 'sana.mirza@example.test', 'emp_id' => '30111'])
+        ->assertSchemaStateSet(['name' => 'Sana Mirza', 'given_name' => 'Sana', 'family_name' => 'Mirza', 'email' => 'sana.mirza@example.test', 'emp_id' => '30111'])
         ->call('create')
         ->assertHasNoFormErrors();
 
