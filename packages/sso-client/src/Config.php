@@ -10,6 +10,12 @@ namespace SsoClient;
  */
 final class Config
 {
+    /** Scopes asked for by default: sign-in, name and photo, email, employee details, roles. */
+    public const DEFAULT_SCOPES = ['openid', 'profile', 'email', 'employee', 'roles'];
+
+    /** Further standard scopes an application may add: `phone` (phone_number) and `address`. */
+    public const OPTIONAL_SCOPES = ['phone', 'address'];
+
     /**
      * @param  string  $issuer  SSO base URL, e.g. https://sso.example.com
      * @param  string  $redirectUri  Registered callback URL of this application
@@ -24,7 +30,7 @@ final class Config
         public readonly string $redirectUri,
         public readonly ?string $postLogoutRedirectUri = null,
         public readonly ?string $cacheDir = null,
-        public readonly array $scopes = ['openid', 'profile', 'email', 'employee', 'roles'],
+        public readonly array $scopes = self::DEFAULT_SCOPES,
         public readonly bool $verifyTls = true,
         public readonly int $timeout = 10,
     ) {

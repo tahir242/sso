@@ -77,6 +77,9 @@ final class PhpKit
 
                 // Optional: only let in users with one of these roles in this application.
                 'roles' => [],
+
+                // Optional: also receive the phone number and/or postal address.
+                // 'extra_scopes' => ['phone', 'address'],
             ];
 
             PHP;
@@ -95,7 +98,9 @@ final class PhpKit
                    require __DIR__ . '/sso-client/autoload.php';
                    \$user = \\SsoClient\\Gate::protect(__DIR__ . '/sso.php');
 
-               \$user->userId, ->username, ->name, ->empId, ->department, ->roles, ->hasRole('clerk')
+               \$user->userId, ->username, ->name, ->empId, ->empInitial, ->department, ->roles, ->hasRole('clerk')
+               \$user->givenName, ->familyName, ->nickname, ->picture (photo URL), ->gender, ->birthdate
+               \$user->phoneNumber, ->address (set 'extra_scopes' => ['phone', 'address'] in sso.php)
 
             4. Sign-out link:  <a href="<?= \\SsoClient\\Gate::logoutUrl() ?>">Sign out</a>
 

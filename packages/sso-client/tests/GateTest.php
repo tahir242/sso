@@ -73,6 +73,52 @@ final class GateTest extends TestCase
         $this->assertSame('Ayesha', $user->name);
     }
 
+    public function test_asks_for_the_default_scopes_plus_extra_scopes(): void
+    {
+        parse_str(parse_url($this->handle()->headers['Location'], PHP_URL_QUERY), $query);
+        $this->assertSame('openid profile email employee roles', $query['scope']);
+
+        Gate::reset();
+        $this->config['extra_scopes'] = ['phone', 'address', 'email'];
+        parse_str(parse_url($this->handle()->headers['Location'], PHP_URL_QUERY), $query);
+        $this->assertSame('openid profile email employee roles phone address', $query['scope']);
+    }
+
+    public function test_reads_the_standard_and_employee_claims(): void
+    {
+        $this->signIn([
+            'given_name' => 'Ayesha', 'middle_name' => 'Noor', 'family_name' => 'Khan', 'nickname' => 'Aisha',
+            'picture' => 'https://sso.example.test/users/01ABC/picture/abc123', 'gender' => 'female', 'birthdate' => '1990-04-05',
+            'phone_number' => '+92 300 1234567', 'zoneinfo' => 'Asia/Karachi', 'locale' => 'en',
+            'address' => ['formatted' => "Civil Hospital Road\nKarachi", 'street_address' => 'Civil Hospital Road', 'locality' => 'Karachi'],
+            'user_id' => 42, 'emp_id' => '30111', 'emp_initial' => 'ANK',
+        ]);
+
+        $user = $this->handle();
+
+        $this->assertInstanceOf(Identity::class, $user);
+        $this->assertSame(['Ayesha', 'Noor', 'Khan', 'Aisha'], [$user->givenName, $user->middleName, $user->familyName, $user->nickname]);
+        $this->assertSame('https://sso.example.test/users/01ABC/picture/abc123', $user->picture);
+        $this->assertSame(['female', '1990-04-05', '+92 300 1234567'], [$user->gender, $user->birthdate, $user->phoneNumber]);
+        $this->assertSame(['Asia/Karachi', 'en'], [$user->zoneinfo, $user->locale]);
+        $this->assertSame('Karachi', $user->address['locality']);
+        $this->assertSame('Aisha', $user->displayName());
+        // Employee claims are unchanged.
+        $this->assertSame([42, '30111', 'ANK'], [$user->userId, $user->empId, $user->empInitial]);
+    }
+
+    public function test_missing_claims_are_null(): void
+    {
+        $this->signIn();
+        $user = $this->handle();
+
+        $this->assertNull($user->givenName);
+        $this->assertNull($user->picture);
+        $this->assertNull($user->phoneNumber);
+        $this->assertNull($user->address);
+        $this->assertSame('Ayesha', $user->displayName());
+    }
+
     public function test_shows_an_error_page_for_a_bad_callback(): void
     {
         $response = $this->handle(['sso' => 'callback', 'state' => 'forged', 'code' => 'x']);

@@ -187,7 +187,11 @@ final class Gate
             redirectUri: (string) ($settings['redirect_uri'] ?? ''),
             postLogoutRedirectUri: $settings['post_logout_redirect_uri'] ?? null,
             cacheDir: $settings['cache_dir'] ?? null,
-            scopes: $settings['scopes'] ?? ['openid', 'profile', 'email', 'employee', 'roles'],
+            // 'scopes' replaces the defaults; 'extra_scopes' (e.g. ['phone', 'address']) adds to them.
+            scopes: array_values(array_unique([
+                ...(array) ($settings['scopes'] ?? Config::DEFAULT_SCOPES),
+                ...(array) ($settings['extra_scopes'] ?? []),
+            ])),
             verifyTls: (bool) ($settings['verify_tls'] ?? true),
         ), $http);
     }
