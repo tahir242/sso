@@ -96,6 +96,10 @@ final class ImportDirectoryUser
 
         return [
             'name' => $name,
+            // OIDC given_name / middle_name / family_name from the AD name attributes.
+            'given_name' => self::attribute($ldapUser, 'givenname', 100),
+            'middle_name' => self::attribute($ldapUser, 'middlename', 100),
+            'family_name' => self::attribute($ldapUser, 'sn', 100),
             'email' => $email,
             'emp_id' => $empId !== '' && ! User::where('emp_id', $empId)->when($ignore, fn ($q) => $q->whereKeyNot($ignore))->exists() ? $empId : null,
             'emp_initial' => $initials,
@@ -121,6 +125,14 @@ final class ImportDirectoryUser
     public static function displayName(LdapUser $ldapUser): string
     {
         return (string) ($ldapUser->getFirstAttribute('displayname') ?: $ldapUser->getFirstAttribute('cn') ?: $ldapUser->getFirstAttribute('samaccountname'));
+    }
+
+    /** A trimmed AD attribute, cut to the column length; null when empty. */
+    private static function attribute(LdapUser $ldapUser, string $name, int $max): ?string
+    {
+        $value = trim((string) $ldapUser->getFirstAttribute($name));
+
+        return $value !== '' ? mb_substr($value, 0, $max) : null;
     }
 
     public static function email(LdapUser $ldapUser): ?string

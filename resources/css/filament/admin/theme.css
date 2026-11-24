@@ -3,3 +3,8 @@
 @source '../../../../app/Filament/**/*';
 @source '../../../../resources/views/filament/**/*';
 @source '../../../../app/Domain/**/Enums/*.php';
+
+/* User form: "Photo" label centred over the round upload area. */
+.sso-photo-field .fi-fo-field-label-ctn {
+    justify-content: center;
+}

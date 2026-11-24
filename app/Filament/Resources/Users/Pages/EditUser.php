@@ -36,7 +36,7 @@ class EditUser extends EditRecord
                 ->modalDescription('Replaces the name, email, employee ID, department, job title and mobile with the values in Active Directory. Initials, location, roles and applications are kept.')
                 ->action(function (): void {
                     if ($this->syncFromDirectory($this->record)) {
-                        $this->refreshFormData(['name', 'email', 'emp_id', 'emp_initial', 'designation', 'mobile', 'department_id']);
+                        $this->refreshFormData(['name', 'given_name', 'middle_name', 'family_name', 'email', 'emp_id', 'emp_initial', 'designation', 'mobile', 'department_id']);
                     }
                 }),
         ];
@@ -76,7 +76,7 @@ class EditUser extends EditRecord
         // Switched from a local account to Active Directory: take the person's details from AD.
         if ($this->sourceBeforeSave === AuthSource::Local && $this->record->auth_source === AuthSource::ActiveDirectory) {
             if ($this->syncFromDirectory($this->record, 'Switched to Active Directory — details updated from AD')) {
-                $this->refreshFormData(['name', 'email', 'emp_id', 'emp_initial', 'designation', 'mobile', 'department_id']);
+                $this->refreshFormData(['name', 'given_name', 'middle_name', 'family_name', 'email', 'emp_id', 'emp_initial', 'designation', 'mobile', 'department_id']);
             }
         }
 
