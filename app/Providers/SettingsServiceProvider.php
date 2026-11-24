@@ -5,7 +5,9 @@ namespace App\Providers;
 use App\Domain\Settings\GeneralSettings;
 use App\Domain\Settings\MailSettings;
 use App\Domain\Settings\NotificationSettings;
+use App\Domain\Settings\PerformanceSettings;
 use App\Domain\Settings\SessionSettings;
+use App\Support\Redis\RedisRuntime;
 use Error;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\ServiceProvider;
@@ -26,6 +28,7 @@ class SettingsServiceProvider extends ServiceProvider
             $this->applySession($this->app->make(SessionSettings::class));
             $this->applyMail($this->app->make(MailSettings::class));
             $this->applyWebPush($this->app->make(NotificationSettings::class));
+            RedisRuntime::apply($this->app->make(PerformanceSettings::class));
         } catch (MissingSettings|QueryException|Error) {
             // Fresh install, migrations not yet run, or a stale settings cache
             // during a deploy (new property): keep config defaults.

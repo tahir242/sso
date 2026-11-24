@@ -1,6 +1,7 @@
 <?php
 
 use App\Support\Operations\QueueHeartbeat;
+use App\Support\Redis\RedisRuntime;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schedule;
 
@@ -25,5 +26,12 @@ Schedule::job(new QueueHeartbeat)->everyFiveMinutes()->name('heartbeat:queue');
 // jobs wait at most about a minute. It runs in the foreground on purpose:
 // Windows background processes (`start /b`) are fragile under Task Scheduler.
 // A separate always-on worker, if one is ever added, does no harm.
+// The queue not in use is drained as well: it holds jobs from before a switch
+// in Settings → Cache, queue & Redis, or from a moment Redis was unreachable.
+foreach (RedisRuntime::idleQueues() as $connection) {
+    Schedule::command("queue:work {$connection} --stop-when-empty --max-time=20 --tries=3 --sleep=1")
+        ->everyMinute()->withoutOverlapping(5)->name("queue:{$connection}");
+}
+
 Schedule::command('queue:work --stop-when-empty --max-time=50 --tries=3 --sleep=1')
     ->everyMinute()->withoutOverlapping(5)->name('queue');

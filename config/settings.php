@@ -69,7 +69,10 @@ return [
      */
     'cache' => [
         'enabled' => true,
-        'store' => null,
+        // Pinned to the .env store: the admin console can move the app cache
+        // to Redis at runtime, but settings are read before that switch, so
+        // they must always live in the same store (or saves would not clear them).
+        'store' => env('SETTINGS_CACHE_STORE', env('CACHE_STORE', 'database')),
         'prefix' => null,
         'ttl' => null,
 

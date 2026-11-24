@@ -6,6 +6,8 @@ use App\Domain\Identity\Models\User;
 use App\Domain\Settings\LdapSettings;
 use App\Domain\Settings\MailSettings;
 use App\Domain\Settings\MfaSettings;
+use App\Domain\Settings\PerformanceSettings;
+use App\Support\Redis\RedisRuntime;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -36,6 +38,7 @@ final class ReadinessCheck
         $this->signingKeys();
         $this->sessions();
         $this->background();
+        $this->redis();
         $this->integrations();
         $this->administrators();
 
@@ -121,6 +124,24 @@ final class ReadinessCheck
         if (Schema::hasTable('failed_jobs')) {
             $failed = DB::table('failed_jobs')->where('failed_at', '>', now()->subDay())->count();
             $this->check($failed === 0, 'Background', 'No failed jobs in the last 24 hours', "{$failed} failed job(s) in the last 24 hours: see `php artisan queue:failed`", warnOnly: true);
+        }
+    }
+
+    private function redis(): void
+    {
+        $settings = app(PerformanceSettings::class);
+        if (! $settings->usesRedis()) {
+            $this->pass('Redis', 'Not used (cache '.config('cache.default').', queue '.config('queue.default').')');
+
+            return;
+        }
+
+        $probe = RedisRuntime::probe($settings->toArray());
+        $this->check($probe['ok'], 'Redis', 'Redis '.($probe['version'] ?? '').' reachable ('.($probe['latency_ms'] ?? '?').' ms, '.$probe['client'].')',
+            'Redis unreachable: '.($probe['error'] ?? '').($settings->redis_fallback ? ' (running on the database meanwhile)' : ''));
+
+        foreach ($probe['warnings'] ?? [] as $warning) {
+            $this->warn('Redis', $warning);
         }
     }
 
