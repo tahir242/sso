@@ -57,7 +57,25 @@ $user->email;
 $user->roles;        // ['clerk']: this application's roles only
 $user->hasRole('clerk');
 $user->usedTwoStepVerification();
+
+// Standard OpenID Connect profile (null when not filled in)
+$user->givenName;    // Ahmed
+$user->middleName;   // null
+$user->familyName;   // Khan
+$user->nickname;     // null
+$user->picture;      // https://…/users/…/picture/…  (profile photo; use in <img src>)
+$user->gender;       // male
+$user->birthdate;    // 1988-02-14
+$user->displayName(); // nickname, else first name, else full name
 ```
+
+The phone number and postal address are only sent when the application asks for them. Add this to `sso.php`:
+
+```php
+'extra_scopes' => ['phone', 'address'],
+```
+
+Then `$user->phoneNumber` (e.g. `+92 300 1234567`) and `$user->address` (an array with `formatted`, `street_address`, `locality`, `region`, `postal_code`, `country`) are filled in.
 
 Typical change in an existing application: wherever it read the old session (`$_SESSION['UserID']`, `user_id()`, ...), read `$user->userId` instead, and replace the old role lookup with `$user->hasRole(...)`.
 

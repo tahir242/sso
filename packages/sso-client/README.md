@@ -107,11 +107,43 @@ update within the access-token lifetime), sign-out when the SSO refuses a
 refresh (access removed, account disabled), single logout, and back-channel
 logout that works with any PHP session storage.
 
-## Claims
+## What `$user` contains
 
-`sub` (permanent id), `user_id` (numeric, stable),
-`preferred_username`, `name`, `email`, `emp_id`, `emp_initial`, `department`,
-`designation`, `roles` (this application's roles only), `sid`, `amr`.
+Each property is `null` when the SSO did not send that claim (empty field, or
+the scope was not asked for). All claims are also in `$user->claims`.
+
+| Property | Claim | Scope |
+|---|---|---|
+| `sub` | `sub` (permanent id) | `openid` |
+| `sid`, `amr` | `sid`, `amr` | `openid` |
+| `name` | `name` (first, middle and last name together) | `profile` |
+| `givenName`, `middleName`, `familyName` | `given_name`, `middle_name`, `family_name` | `profile` |
+| `nickname` | `nickname` | `profile` |
+| `username` | `preferred_username` (Windows logon name for staff) | `profile` |
+| `picture` | `picture` (absolute URL of the profile photo) | `profile` |
+| `gender` | `gender` (`female`, `male` or `other`) | `profile` |
+| `birthdate` | `birthdate` (`YYYY-MM-DD`) | `profile` |
+| `zoneinfo`, `locale` | `zoneinfo`, `locale` | `profile` |
+| `email` | `email` | `email` |
+| `phoneNumber` | `phone_number` | `phone` *(not asked for by default)* |
+| `address` | `address` (array: `formatted`, `street_address`, `locality`, `region`, `postal_code`, `country`) | `address` *(not asked for by default)* |
+| `userId` | `user_id` (numeric, stable; the old SSO's UserID) | `employee` |
+| `empId`, `empInitial` | `emp_id`, `emp_initial` | `employee` |
+| `department`, `designation` | `department`, `designation` | `employee` |
+| `roles` | `roles` (this application's roles only) | `roles` |
+
+`$user->displayName()` gives the nickname, else the first name, else the full name.
+
+### Asking for phone and address
+
+By default the client asks for `openid profile email employee roles`. To also
+get the phone number and postal address, add them in `sso.php`:
+
+```php
+'extra_scopes' => ['phone', 'address'],
+```
+
+or pass `scopes: [...Config::DEFAULT_SCOPES, 'phone', 'address']` to `Config`.
 
 ## .NET and Java applications
 
