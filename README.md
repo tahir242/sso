@@ -19,7 +19,7 @@ installs on servers **without internet access** from a single release zip.
   discovery (`/.well-known/openid-configuration`), JWKS, RP-initiated and back-channel logout.
 - **Sign-in:** Active Directory (LDAP) or local accounts, remembered accounts on shared
   computers, lockout and password rules, idle and absolute session limits.
-- **Two-step verification:** authenticator apps, recovery codes, trusted devices, step-up
+- **Two-step verification:** each user turns it on or off themselves; authenticator apps, recovery codes, trusted devices
   verification for sensitive actions.
 - **Applications:** register OIDC clients, per-application roles, open-to-everyone or
   assigned-users-only access, server-to-server REST API with scopes.

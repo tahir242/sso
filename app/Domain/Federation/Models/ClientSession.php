@@ -8,9 +8,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * An application the user opened during one SSO session (`sid`).
+ * An application the user opened during one SSO session (`sid`, held in the
+ * browser session `session_id`).
  */
-#[Fillable(['sid', 'user_id', 'oauth_client_id', 'auth_time', 'amr', 'last_authorized_at', 'logged_out_at'])]
+#[Fillable(['sid', 'session_id', 'user_id', 'oauth_client_id', 'auth_time', 'amr', 'last_authorized_at', 'logged_out_at'])]
 class ClientSession extends Model
 {
     protected function casts(): array

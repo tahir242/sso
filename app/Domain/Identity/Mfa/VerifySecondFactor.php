@@ -8,8 +8,8 @@ use App\Domain\Identity\Models\User;
 use Illuminate\Support\Facades\RateLimiter;
 
 /**
- * Checks an authenticator or recovery code, with a per-user attempt limit.
- * Shared by the sign-in challenge and the step-up ("verify it's you") screen.
+ * Checks an authenticator or recovery code at sign-in, with a per-user attempt
+ * limit.
  */
 final readonly class VerifySecondFactor
 {

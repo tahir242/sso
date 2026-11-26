@@ -18,9 +18,9 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * 1. the client must be an active registered application,
  * 2. the user must be assigned to it (else a "no access" page),
- * 3. `max_age` and the application's MFA requirement are enforced (step-up),
+ * 3. `max_age` is enforced (re-authentication),
  * 4. the (SSO session, client) pair is recorded for `sid`/`auth_time`/`amr`
- *    and back-channel logout.
+ *    and back-channel logout (on sign-out or when the SSO session expires).
  *
  * Guests pass straight through: Passport sends them to /login and back.
  */
@@ -74,15 +74,10 @@ class AuthorizeApplicationAccess
             return response()->view('oidc.no-access', ['application' => $application], 403);
         }
 
-        if ($application->requires_mfa && ! $session->get(CompleteLogin::MFA_AT)) {
-            $session->put('url.intended', $request->fullUrl());
-
-            return redirect()->route('verify');
-        }
-
         $clientSession = ClientSession::updateOrCreate(
             ['sid' => $this->sid($request), 'oauth_client_id' => $application->oauth_client_id],
             [
+                'session_id' => $session->getId(),
                 'user_id' => $user->getKey(),
                 'auth_time' => now()->setTimestamp((int) $session->get(CompleteLogin::STARTED_AT, now()->getTimestamp())),
                 'amr' => $session->get(CompleteLogin::MFA_AT) ? ['pwd', 'otp'] : ['pwd'],

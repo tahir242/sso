@@ -4,13 +4,10 @@ namespace App\Filament\Pages\Settings;
 
 use App\Domain\Settings\MfaSettings;
 use BackedEnum;
-use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Symfony\Component\HttpFoundation\IpUtils;
 
 class ManageTwoStepVerification extends BaseSettingsPage
 {
@@ -29,25 +26,8 @@ class ManageTwoStepVerification extends BaseSettingsPage
     public function form(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make('When is a code required?')
-                ->description('Users who have turned two-step verification on are always asked for a code (unless the computer is remembered).')
-                ->columnSpanFull()
-                ->schema([
-                    Toggle::make('required_for_admins')->label('Always for administrators (super-admin, app owners, helpdesk, auditors)'),
-                    Toggle::make('required_off_network')->label('For everyone signing in from outside the hospital network'),
-                    TagsInput::make('trusted_networks')
-                        ->label('Hospital network ranges (CIDR)')
-                        ->placeholder('10.0.0.0/8')
-                        ->nestedRecursiveRules([
-                            fn () => function (string $attribute, mixed $value, \Closure $fail): void {
-                                [$ip] = explode('/', (string) $value) + [null];
-                                if (! filter_var($ip, FILTER_VALIDATE_IP) || ! IpUtils::checkIp($ip, (string) $value)) {
-                                    $fail("“{$value}” is not a valid IP range.");
-                                }
-                            },
-                        ]),
-                ]),
             Section::make('Options')
+                ->description('Each user decides whether to turn two-step verification on (Account → Security). Users who have it on are asked for a code at sign-in, unless the computer is remembered.')
                 ->columns(2)
                 ->columnSpanFull()
                 ->schema([

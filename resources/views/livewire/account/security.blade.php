@@ -62,23 +62,12 @@
                         <x-text-input wire:model="code" name="code" label="Authentication code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" class="flex-1" />
                         <div class="flex flex-wrap gap-2 sm:mt-7">
                             <button type="button" wire:click="regenerateRecoveryCodes" class="{{ $secondaryButton }}">New recovery codes</button>
-                            @if ($canDisableMfa)
-                                <button type="button" wire:click="disableTwoFactor" wire:confirm="Turn off two-step verification? Your account will be less secure." class="{{ $dangerButton }}">Turn off</button>
-                            @endif
+                            <button type="button" wire:click="disableTwoFactor" wire:confirm="Turn off two-step verification? Your account will be less secure." class="{{ $dangerButton }}">Turn off</button>
                         </div>
                     </div>
-                    @unless ($canDisableMfa)
-                        <p class="mt-3 text-xs text-zinc-500">Two-step verification is required for administrator accounts.</p>
-                    @endunless
                 </div>
             @else
-                <p class="text-sm text-zinc-600 dark:text-zinc-400">
-                    @if ($mfaRequired)
-                        Your account requires two-step verification.
-                    @else
-                        Recommended. Protects your account even if someone learns your password.
-                    @endif
-                </p>
+                <p class="text-sm text-zinc-600 dark:text-zinc-400">Recommended. Protects your account even if someone learns your password.</p>
                 <button type="button" wire:click="startSetup" class="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700">
                     <x-heroicon-o-shield-check class="size-4" /> Set up
                 </button>

@@ -17,9 +17,7 @@ use App\Livewire\Account\EmailAddress;
 use App\Livewire\Account\Notifications;
 use App\Livewire\Account\Security;
 use App\Livewire\Auth\Login;
-use App\Livewire\Auth\StepUpChallenge;
 use App\Livewire\Auth\TwoFactorChallenge;
-use App\Livewire\Auth\TwoFactorSetup;
 use App\Livewire\Docs\IntegrationGuide;
 use App\Livewire\MyApplications;
 use App\Livewire\Requests\ChangeRequestForm;
@@ -55,7 +53,6 @@ Route::get('/users/{user}/picture/{version}', ProfilePhotoController::class)
 Route::middleware('guest')->group(function () {
     Route::livewire('/login', Login::class)->name('login');
     Route::livewire('/login/two-factor', TwoFactorChallenge::class)->name('login.two-factor');
-    Route::livewire('/login/two-factor/setup', TwoFactorSetup::class)->name('login.two-factor.setup');
 });
 
 Route::middleware(['auth', EnsureEmailAddress::class])->group(function () {
@@ -66,7 +63,6 @@ Route::middleware(['auth', EnsureEmailAddress::class])->group(function () {
     Route::livewire('/requests/new-staff', NewStaffForm::class)->name('requests.new-staff');
     // Helpdesk and suggestion attachments, after the owning record's permission check.
     Route::get('/media/{uuid}/{conversion?}', MediaController::class)->name('media.show');
-    Route::livewire('/verify', StepUpChallenge::class)->name('verify');
     Route::livewire('/account/security', Security::class)->name('account.security');
     Route::livewire('/account/notifications', Notifications::class)->name('account.notifications');
     Route::post('/account/push-subscriptions', [PushSubscriptionController::class, 'store'])->name('account.push.store');

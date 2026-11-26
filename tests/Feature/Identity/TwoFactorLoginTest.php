@@ -6,12 +6,9 @@ use App\Domain\Identity\Mfa\TrustedDeviceManager;
 use App\Domain\Identity\Models\User;
 use App\Livewire\Auth\Login;
 use App\Livewire\Auth\TwoFactorChallenge;
-use App\Livewire\Auth\TwoFactorSetup;
 use Illuminate\Support\Facades\Cookie;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
-use PragmaRX\Google2FA\Google2FA;
-use Spatie\Permission\Models\Role;
 
 function signInWithPassword(User $user): Testable
 {
@@ -118,40 +115,10 @@ it('remembers a trusted computer and skips the code next time', function () {
     $this->assertAuthenticatedAs($user);
 });
 
-it('requires enrolment when signing in from outside the hospital network', function () {
-    treatEveryoneAsOffNetwork();
-    $user = User::factory()->create(['password' => 'correct-horse-battery']);
-
-    signInWithPassword($user)->assertRedirect(route('login.two-factor.setup'));
-    $this->assertGuest();
-});
-
-it('lets normal users on the hospital network sign in without a code', function () {
+it('lets users who have not turned two-step verification on sign in without a code', function () {
     $user = User::factory()->create(['password' => 'correct-horse-battery']);
 
     signInWithPassword($user)->assertRedirect(route('home'));
-    $this->assertAuthenticatedAs($user);
-});
-
-it('enrols an administrator during sign-in and shows recovery codes once', function () {
-    $user = User::factory()->create(['password' => 'correct-horse-battery']);
-    $user->assignRole(Role::findOrCreate('super-admin', 'web'));
-    PendingLogin::start($user);
-
-    $component = Livewire::test(TwoFactorSetup::class)->assertSee('Set up two-step verification');
-    $secret = session('auth.mfa_setup_secret');
-
-    $component->set('code', '000000')->call('confirm')->assertHasErrors('code');
-
-    $component->set('code', app(Google2FA::class)->getCurrentOtp($secret))
-        ->call('confirm')
-        ->assertHasNoErrors()
-        ->assertSee('Save your recovery codes');
-
-    expect($user->fresh()->hasTwoFactorEnabled())->toBeTrue()
-        ->and($component->get('recoveryCodes'))->toHaveCount(8);
-
-    $component->call('finish')->assertRedirect('/admin');
     $this->assertAuthenticatedAs($user);
 });
 

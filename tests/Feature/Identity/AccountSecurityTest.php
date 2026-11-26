@@ -42,12 +42,13 @@ it('needs a current code to turn two-step verification off', function () {
     expect($user->fresh()->hasTwoFactorEnabled())->toBeFalse();
 });
 
-it('does not let administrators turn two-step verification off', function () {
+it('lets administrators turn two-step verification off too', function () {
     [$user, $secret] = userWithMfa();
     $user->assignRole(Role::findOrCreate('super-admin', 'web'));
     $this->actingAs($user);
 
-    Livewire::test(Security::class)->set('code', currentOtp($secret))->call('disableTwoFactor')->assertForbidden();
+    Livewire::test(Security::class)->set('code', currentOtp($secret))->call('disableTwoFactor')->assertHasNoErrors();
+    expect($user->fresh()->hasTwoFactorEnabled())->toBeFalse();
 });
 
 it('changes a local password', function () {

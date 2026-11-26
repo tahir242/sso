@@ -5,7 +5,7 @@
 <figure {{ $attributes->class('overflow-hidden rounded-3xl bg-white p-4 shadow-xl shadow-slate-900/5 ring-1 ring-slate-200 sm:p-6 dark:bg-zinc-900 dark:ring-zinc-800') }}>
     <svg viewBox="0 0 760 300" class="h-auto w-full" role="img" aria-labelledby="{{ $uid }}-title {{ $uid }}-desc">
         <title id="{{ $uid }}-title">How {{ $product }} signs staff in through SSO</title>
-        <desc id="{{ $uid }}-desc">The staff member opens {{ $product }}, which sends them to SSO using {{ $protocol }}. SSO checks the password against Active Directory, applies two-step verification where required, and returns a signed identity to {{ $product }}.</desc>
+        <desc id="{{ $uid }}-desc">The staff member opens {{ $product }}, which sends them to SSO using {{ $protocol }}. SSO checks the password against Active Directory, applies two-step verification for users who have turned it on, and returns a signed identity to {{ $product }}.</desc>
         <defs>
             <linearGradient id="{{ $uid }}-red" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d10f0f"/><stop offset="1" stop-color="#7e0505"/></linearGradient>
             <marker id="{{ $uid }}-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" class="fill-slate-400"/></marker>
@@ -57,7 +57,7 @@
 
         <g font-family="Inter, Segoe UI, sans-serif" font-size="12" class="fill-slate-500 dark:fill-zinc-400">
             <text x="20" y="262">1 Staff open {{ \Illuminate\Support\Str::limit($product, 22, '…') }}  ·  2 It sends them to SSO ({{ $protocol }})</text>
-            <text x="20" y="282">3 Password checked against Active Directory (+ two-step when required)  ·  4 A signed identity returns; no second password</text>
+            <text x="20" y="282">3 Password checked against Active Directory (+ two-step if turned on)  ·  4 A signed identity returns; no second password</text>
         </g>
     </svg>
 </figure>

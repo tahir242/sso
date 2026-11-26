@@ -5,7 +5,6 @@ use App\Domain\Federation\Models\Application;
 use App\Domain\Identity\Directory\ActiveDirectory;
 use App\Domain\Identity\Models\User;
 use App\Domain\Settings\LdapSettings;
-use App\Domain\Settings\MfaSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -61,16 +60,6 @@ function userWithMfa(array $attributes = []): array
 function currentOtp(string $secret): string
 {
     return app(Google2FA::class)->getCurrentOtp($secret);
-}
-
-/**
- * Makes every IP (including the test client's 127.0.0.1) count as off-network.
- */
-function treatEveryoneAsOffNetwork(): void
-{
-    $settings = app(MfaSettings::class);
-    $settings->trusted_networks = [];
-    $settings->save();
 }
 
 function superAdmin(array $attributes = []): User

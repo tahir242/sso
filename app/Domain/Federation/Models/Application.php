@@ -19,7 +19,7 @@ use Spatie\Activitylog\Support\LogOptions;
  */
 #[Fillable([
     'slug', 'name', 'description', 'base_url', 'oauth_client_id', 'post_logout_redirect_uris',
-    'backchannel_logout_uri', 'requires_mfa', 'owner_user_id', 'active', 'approval_policy', 'api_scopes',
+    'backchannel_logout_uri', 'owner_user_id', 'active', 'approval_policy', 'api_scopes',
     'access_mode', 'require_pkce',
 ])]
 class Application extends Model
@@ -32,7 +32,6 @@ class Application extends Model
             'post_logout_redirect_uris' => 'array',
             'approval_policy' => 'array',
             'api_scopes' => 'array',
-            'requires_mfa' => 'boolean',
             'active' => 'boolean',
             'access_mode' => AccessMode::class,
             'require_pkce' => 'boolean',

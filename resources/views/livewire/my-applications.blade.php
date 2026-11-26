@@ -58,11 +58,8 @@
                             <div class="flex items-start gap-4">
                                 <x-app-icon :name="$application->name" size="size-11" />
                                 <div class="min-w-0 flex-1">
-                                    <p class="flex items-center gap-1.5 font-semibold text-zinc-900 dark:text-white">
-                                        <a href="{{ $application->base_url }}" target="_blank" rel="noopener" class="truncate after:absolute after:inset-0 after:rounded-2xl focus-visible:outline-none">{{ $application->name }}</a>
-                                        @if ($application->requires_mfa)
-                                            <x-heroicon-o-shield-check class="size-4 shrink-0 text-primary-600 dark:text-primary-400" title="Requires two-step verification" />
-                                        @endif
+                                    <p class="truncate font-semibold text-zinc-900 dark:text-white">
+                                        <a href="{{ $application->base_url }}" target="_blank" rel="noopener" class="after:absolute after:inset-0 after:rounded-2xl focus-visible:outline-none">{{ $application->name }}</a>
                                     </p>
                                     @if ($application->description)
                                         <p class="mt-1 line-clamp-2 text-sm text-zinc-500 dark:text-zinc-400">{{ $application->description }}</p>

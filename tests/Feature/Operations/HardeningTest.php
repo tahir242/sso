@@ -1,6 +1,7 @@
 <?php
 
 use App\Domain\Identity\Models\User;
+use App\Http\Middleware\ThrottleFailedClientAuthentication;
 use App\Support\Operations\Backup;
 use App\Support\Operations\QueueHeartbeat;
 use Illuminate\Support\Facades\Cache;
@@ -33,13 +34,26 @@ it('uses a neutral session cookie name', function () {
     expect(config('session.cookie'))->toBe('sso_session');
 });
 
-it('throttles token requests from unknown clients hard and known clients gently', function () {
+it('throttles failed client authentication at the token endpoint', function () {
     for ($i = 0; $i < 20; $i++) {
-        $this->post('/oauth/token', ['grant_type' => 'client_credentials', 'client_id' => 'guess', 'client_secret' => 'x']);
+        $this->post('/oauth/token', ['grant_type' => 'client_credentials', 'client_id' => 'guess', 'client_secret' => 'x'])->assertUnauthorized();
     }
     $this->post('/oauth/token', ['grant_type' => 'client_credentials', 'client_id' => 'guess'])->assertTooManyRequests();
 
+    // Another client from the same address is not blocked by someone else's failures.
     [$app, $secret] = apiApp('lab');
+    $this->post('/oauth/token', ['grant_type' => 'client_credentials', 'client_id' => $app->oauth_client_id, 'client_secret' => $secret, 'scope' => 'users.read'])->assertOk();
+});
+
+it('does not throttle an application whose users have expired refresh tokens', function () {
+    [$app, $secret] = apiApp('lab');
+
+    // invalid_grant (HTTP 400) is normal for a busy application and never counts.
+    for ($i = 0; $i < ThrottleFailedClientAuthentication::PER_CLIENT + 5; $i++) {
+        $this->post('/oauth/token', ['grant_type' => 'refresh_token', 'refresh_token' => 'expired', 'client_id' => $app->oauth_client_id, 'client_secret' => $secret])
+            ->assertStatus(400);
+    }
+
     $this->post('/oauth/token', ['grant_type' => 'client_credentials', 'client_id' => $app->oauth_client_id, 'client_secret' => $secret, 'scope' => 'users.read'])->assertOk();
 });
 

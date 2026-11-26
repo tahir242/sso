@@ -5,7 +5,6 @@ namespace App\Support\Operations;
 use App\Domain\Identity\Models\User;
 use App\Domain\Settings\LdapSettings;
 use App\Domain\Settings\MailSettings;
-use App\Domain\Settings\MfaSettings;
 use App\Domain\Settings\PerformanceSettings;
 use App\Support\Redis\RedisRuntime;
 use Illuminate\Support\Facades\Cache;
@@ -157,9 +156,6 @@ final class ReadinessCheck
         } else {
             $this->warn('Integrations', 'Active Directory sign-in is off');
         }
-
-        $mfa = app(MfaSettings::class);
-        $this->check($mfa->required_for_admins, 'Integrations', 'Two-step verification required for administrators', 'Administrators can sign in without two-step verification');
     }
 
     private function administrators(): void

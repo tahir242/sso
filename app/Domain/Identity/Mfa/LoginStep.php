@@ -6,5 +6,4 @@ enum LoginStep
 {
     case Complete;
     case ChallengeMfa;
-    case EnrolMfa;
 }

@@ -2,6 +2,7 @@
 
 use App\Domain\Federation\Actions\GrantApplicationAccess;
 use App\Domain\Federation\Actions\RegisterApplication;
+use App\Domain\Federation\Jobs\SendBackChannelLogout;
 use App\Domain\Federation\Models\Application;
 use App\Domain\Federation\Models\ClientSession;
 use App\Domain\Federation\Oidc\Claims;
@@ -10,6 +11,9 @@ use App\Domain\Identity\Actions\CompleteLogin;
 use App\Domain\Identity\Enums\UserStatus;
 use App\Domain\Identity\Models\User;
 use App\Domain\Identity\Support\ProfilePhoto;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -241,18 +245,16 @@ it('treats expired access as no access', function () {
     $this->actingAs($user)->withSession(signedInSession())->get(authorizeUrl($app, $challenge))->assertForbidden();
 });
 
-it('asks for a second factor before opening an application that requires it', function () {
-    [$app, $secret] = registerApp(['requires_mfa' => true]);
-    [$user] = userWithMfa();
-    app(GrantApplicationAccess::class)->handle($app, $user);
-    [$verifier, $challenge] = pkce();
+it('opens applications with or without two-step verification and reports it in amr', function () {
+    [$app, $secret] = registerApp();
+    $user = assignedUser($app);
 
-    $this->actingAs($user)->withSession(signedInSession(mfa: false))
-        ->get(authorizeUrl($app, $challenge))
-        ->assertRedirect(route('verify'));
+    foreach ([false => ['pwd'], true => ['pwd', 'otp']] as $mfa => $amr) {
+        [$verifier, $challenge] = pkce();
+        $idToken = exchangeCode($app, $secret, obtainCode($user, $app, $challenge, mfa: (bool) $mfa), $verifier)->json('id_token');
 
-    $idToken = exchangeCode($app, $secret, obtainCode($user, $app, $challenge, mfa: true), $verifier)->json('id_token');
-    expect(decodeJwt($idToken)->claims()->get('amr'))->toBe(['pwd', 'otp']);
+        expect(decodeJwt($idToken)->claims()->get('amr'))->toBe($amr);
+    }
 });
 
 it('blocks deactivated applications', function () {
@@ -286,6 +288,82 @@ it('signs the user out of every application with back-channel logout', function 
             && $token->claims()->get('aud') === [$app->oauth_client_id]
             && array_key_exists('http://schemas.openid.net/event/backchannel-logout', (array) $token->claims()->get('events'));
     });
+});
+
+it('signs the user out of every application when the SSO session expires', function () {
+    Http::fake();
+    [$app] = registerApp();
+    $user = assignedUser($app);
+    [, $challenge] = pkce();
+    obtainCode($user, $app, $challenge);
+
+    expect(ClientSession::first()->session_id)->not->toBeNull();
+
+    // Still active: nothing happens.
+    $this->artisan('sso:end-expired-sessions')->assertSuccessful();
+    expect(ClientSession::first()->logged_out_at)->toBeNull();
+    Http::assertNothingSent();
+
+    // Idle longer than the idle timeout (Laravel's session lifetime).
+    $this->travel(config('session.lifetime') + 1)->minutes();
+    $this->artisan('sso:end-expired-sessions')->assertSuccessful();
+
+    expect(ClientSession::first()->logged_out_at)->not->toBeNull();
+    Http::assertSent(fn ($request) => $request->url() === 'https://hr.example.test/sso/backchannel-logout'
+        && decodeJwt($request['logout_token'])->claims()->get('sid') === 'sid-abc');
+});
+
+it('ends application sessions recorded without a browser session', function () {
+    Http::fake();
+    [$app] = registerApp();
+    $user = assignedUser($app);
+    [, $challenge] = pkce();
+    obtainCode($user, $app, $challenge);
+    ClientSession::query()->update(['session_id' => null]);
+
+    $this->artisan('sso:end-expired-sessions')->assertSuccessful();
+
+    expect(ClientSession::first()->logged_out_at)->not->toBeNull();
+});
+
+it('checks browser sessions in the database session store with one query per batch', function () {
+    Http::fake();
+    config(['session.driver' => 'database']);
+    app('session')->forgetDrivers();
+    [$app] = registerApp();
+    $user = assignedUser($app);
+    [, $challenge] = pkce();
+    obtainCode($user, $app, $challenge);
+    $sessionId = ClientSession::first()->session_id;
+
+    DB::table('sessions')->updateOrInsert(['id' => $sessionId], ['user_id' => $user->id, 'payload' => '', 'last_activity' => now()->getTimestamp()]);
+    $this->artisan('sso:end-expired-sessions')->assertSuccessful();
+    expect(ClientSession::first()->logged_out_at)->toBeNull();
+
+    DB::table('sessions')->where('id', $sessionId)->update(['last_activity' => now()->subMinutes(config('session.lifetime') + 1)->getTimestamp()]);
+    $this->artisan('sso:end-expired-sessions')->assertSuccessful();
+    expect(ClientSession::first()->logged_out_at)->not->toBeNull();
+});
+
+it('skips an application whose back-channel logout address is down', function () {
+    $calls = 0;
+    Http::fake(function () use (&$calls) {
+        $calls++;
+
+        throw new ConnectionException('Connection refused');
+    });
+    [$app] = registerApp();
+    $user = assignedUser($app);
+    [, $challenge] = pkce();
+    obtainCode($user, $app, $challenge);
+    $job = fn () => app()->call([new SendBackChannelLogout(ClientSession::first()->id), 'handle']);
+
+    expect($job)->toThrow(ConnectionException::class)
+        ->and(Cache::has('backchannel-down:'.$app->oauth_client_id))->toBeTrue();
+
+    // While it is marked down, the job goes back to the queue without calling it.
+    $job();
+    expect($calls)->toBe(1);
 });
 
 it('supports RP-initiated logout to a registered address only', function () {
