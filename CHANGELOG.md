@@ -51,6 +51,13 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   hospital network, hospital network ranges), forced set-up during sign-in, and the
   `sso:check` item about it.
 
+### Security
+
+- Dependency updates for published advisories: `symfony/http-kernel`, `symfony/routing`,
+  `symfony/html-sanitizer`, `symfony/http-foundation`, `symfony/console` and `symfony/mime`
+  7.4.24, `symfony/mailer` 7.4.24 (the patched long-term-support line, replacing 8.0.15),
+  `league/csv` 9.30.0 and `egulias/email-validator` 4.0.5.
+
 ## [1.1.0] - 2026-11-24
 
 ### Added
