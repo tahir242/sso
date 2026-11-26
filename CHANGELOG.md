@@ -7,6 +7,20 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Settings → System information: server, PHP (version, extensions, OPcache), Laravel and
+  package versions, caches, database (version, size, largest tables), cache / session / queue
+  stores, scheduler and queue activity, queued and failed jobs, disk space and the `sso:check`
+  health checks, as the web server sees them. Super-admins only.
+
+### Fixed
+
+- The test suite could rebuild a real database: with a cached configuration
+  (`php artisan optimize`) it ignored `phpunit.xml` and used the server's database. Tests now
+  never load cached configuration, and refuse to start unless the database is an in-memory
+  SQLite database or one whose name ends in `_test`.
+
 ## [1.2.0] - 2026-11-26
 
 ### Added

@@ -403,6 +403,11 @@ C:\xampp\php84\php.exe artisan sso:check
 Shows in one table whether the database, keys, background jobs, mail and Active Directory are
 working. Run it after any change and whenever something seems wrong.
 
+The same checks, plus facts about the server, PHP (version, extensions, OPcache), Laravel, the
+database (version, size, largest tables), the queue and the disk, are in the admin console under
+**Settings → System information** (super-admins only). That page reads everything through Apache,
+so it shows the PHP and `php.ini` the site really uses, which can differ from the command line.
+
 ### Changing `.env`
 
 The settings are cached for speed. After editing `.env`, run:
