@@ -74,7 +74,6 @@ class TwoFactorChallenge extends Component
             ...$this->shellData(),
             'canTrustDevice' => $devices->enabled(),
             'trustDays' => $settings->trusted_device_days,
-            'cancelUrl' => route('login'),
         ]);
     }
 }

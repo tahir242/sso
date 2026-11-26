@@ -4,7 +4,6 @@ namespace App\Providers;
 
 use App\Domain\Audit\SecurityAlerts;
 use App\Domain\Federation\ApiScopes;
-use App\Domain\Federation\Models\OAuthClient;
 use App\Domain\Identity\Models\User;
 use App\Support\Database\SqlServerConnection;
 use Dedoc\Scramble\Scramble;
@@ -20,7 +19,6 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Str;
 use Spatie\Permission\Events\RoleAttachedEvent;
 use Spatie\Permission\Models\Role;
 
@@ -40,18 +38,6 @@ class AppServiceProvider extends ServiceProvider
         // Server-to-server API: 120 calls a minute per application.
         RateLimiter::for('application-api', fn (Request $request) => Limit::perMinute(120)
             ->by('app:'.($request->attributes->get('application')?->getKey() ?? $request->ip())));
-
-        // Token endpoint: generous per application (one app server signs in
-        // many users), strict for unknown clients guessing secrets or codes.
-        RateLimiter::for('oauth-token', function (Request $request) {
-            $client = (string) ($request->input('client_id') ?? $request->getUser() ?? '');
-            // Client IDs are UUIDs; SQL Server errors on comparing anything else with that column.
-            $known = Str::isUuid($client) && OAuthClient::whereKey($client)->where('revoked', false)->exists();
-
-            return $known
-                ? Limit::perMinute(600)->by('token:'.$client.'|'.$request->ip())
-                : Limit::perMinute(20)->by('token-unknown:'.$request->ip());
-        });
 
         $this->documentApi();
 

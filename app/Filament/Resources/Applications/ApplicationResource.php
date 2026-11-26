@@ -92,7 +92,6 @@ class ApplicationResource extends Resource
                         ->searchable(['name', 'username', 'emp_id'])
                         ->getOptionLabelFromRecordUsing(fn (User $record) => "{$record->name} ({$record->username})")
                         ->disabled(! self::isSuperAdmin()),
-                    Toggle::make('requires_mfa')->label('Require two-step verification to open')->inline(false),
                     Toggle::make('active')->default(true)->inline(false)
                         ->helperText('Inactive applications cannot sign anyone in.')
                         ->disabled(! self::isSuperAdmin()),
@@ -165,7 +164,6 @@ class ApplicationResource extends Resource
                 TextColumn::make('assignments_count')->counts('assignments')->label('Users')->sortable()->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('owner.name')->label('Owner')->toggleable()->visibleFrom('xl'),
                 TextColumn::make('roles_count')->counts('roles')->label('Roles')->toggleable(isToggledHiddenByDefault: true),
-                IconColumn::make('requires_mfa')->label('2-step')->boolean()->alignCenter()->visibleFrom('md'),
                 IconColumn::make('active')->boolean()->alignCenter(),
             ])
             ->stackedOnMobile()

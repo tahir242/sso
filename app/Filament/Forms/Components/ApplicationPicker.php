@@ -40,7 +40,6 @@ class ApplicationPicker extends Field
                 'description' => (string) $app->description,
                 'owner' => $app->owner?->name,
                 'users' => $app->assignments_count,
-                'mfa' => $app->requires_mfa,
                 'everyone' => $app->access_mode === AccessMode::Everyone,
                 'roles' => $app->roles->pluck('name')->all(),
             ])

@@ -45,6 +45,6 @@
         <button type="button" wire:click="toggleRecovery" class="font-medium text-primary-700 underline-offset-2 hover:underline dark:text-primary-400">
             {{ $usingRecoveryCode ? 'Use authenticator app instead' : 'Use a recovery code' }}
         </button>
-        <a href="{{ $cancelUrl }}" class="text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200">Cancel</a>
+        <a href="{{ route('login') }}" class="text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200">Cancel</a>
     </div>
 </x-auth-shell>

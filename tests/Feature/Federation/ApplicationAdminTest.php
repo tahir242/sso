@@ -30,6 +30,18 @@ it('registers an application with an OIDC client and a default role', function (
         ->and($app->roles()->pluck('key')->all())->toBe(['user']);
 });
 
+it('deletes an application role that users hold', function () {
+    $app = makeApp('HR System');
+    $role = $app->roles()->create(['key' => 'clerk', 'name' => 'Clerk']);
+    $assignment = app(GrantApplicationAccess::class)->handle($app, User::factory()->create());
+    $assignment->roles()->attach($role);
+
+    $role->delete();
+
+    expect($app->roles()->whereKey($role->getKey())->exists())->toBeFalse()
+        ->and($assignment->roles()->pluck('key')->all())->not->toContain('clerk');
+});
+
 it('only shows app owners their own applications', function () {
     $owner = tap(User::factory()->create(), fn (User $u) => $u->assignRole(Role::findOrCreate('app-owner', 'web')));
     $mine = makeApp('HR System', $owner);

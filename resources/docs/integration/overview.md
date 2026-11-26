@@ -24,7 +24,7 @@ Most libraries need only the **issuer** (or discovery URL), the client ID and se
 ## How sign-in works
 
 1. Your application sends the browser to the SSO (*authorization code flow*).
-2. The person signs in once (Windows password, or a local SSO account) and, where required, completes two-step verification. If they are already signed in to the SSO, this is instant.
+2. The person signs in once (Windows password, or a local SSO account) and, if they have turned it on, completes two-step verification. If they are already signed in to the SSO, this is instant.
 3. The SSO checks that they **have access to your application**. People without access never reach you; they are offered a "request access" page that goes to their head of department and to you as the application owner.
 4. The browser comes back to your **redirect URI** with a code; your library exchanges it (with the client secret) for tokens and an **ID token** describing the user.
 
@@ -71,6 +71,6 @@ Ask only for the scopes you need. Claims come in the ID token (and from the user
 1. Sign in, then open another connected application: no second sign-in.
 2. Roles: a user with a role sees the right screens; a user without it does not.
 3. Sign out from your application: you are also signed out of the SSO.
-4. Sign out from another application: your session ends too (back-channel logout).
+4. Sign out from another application: your session ends too (back-channel logout). The same happens, within about a minute, when the SSO session times out (idle or maximum length).
 5. Remove the user's access in the SSO: they are signed out at the next token refresh (within 15 minutes) and cannot sign in again.
 6. A user without access is shown the SSO's "request access" page, not an error.

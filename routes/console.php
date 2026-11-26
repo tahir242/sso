@@ -15,7 +15,12 @@ use Illuminate\Support\Facades\Schedule;
 Schedule::command('access:escalate')->hourly()->withoutOverlapping();
 Schedule::command('access:reviews')->dailyAt('07:00')->withoutOverlapping();
 Schedule::command('helpdesk:sla')->hourly()->withoutOverlapping();
+// Housekeeping before the backup, so tables (and the backup) stay small.
+Schedule::command('sso:prune')->dailyAt('01:00')->withoutOverlapping();
+Schedule::command('passport:purge')->dailyAt('01:15')->withoutOverlapping();
 Schedule::command('sso:backup')->dailyAt('01:30')->withoutOverlapping();
+// Before the queue below, so the back-channel logouts go out the same minute.
+Schedule::command('sso:end-expired-sessions')->everyMinute()->withoutOverlapping();
 
 // Heartbeats checked by `php artisan sso:check`: the scheduler runs, and a queue worker picks up jobs.
 Schedule::call(fn () => Cache::forever('heartbeat:scheduler', now()->getTimestamp()))->everyMinute()->name('heartbeat:scheduler');

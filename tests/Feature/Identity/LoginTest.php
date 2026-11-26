@@ -37,7 +37,7 @@ it('signs in with username or employee ID', function (string $field) {
     expect($user->fresh()->last_login_at)->not->toBeNull();
 })->with(['username', 'emp_id']);
 
-it('makes administrators set up two-step verification before signing in', function () {
+it('signs administrators in without two-step verification when they have not turned it on', function () {
     $user = User::factory()->create(['password' => 'correct-horse-battery']);
     $user->assignRole(Role::findOrCreate('super-admin', 'web'));
 
@@ -45,9 +45,9 @@ it('makes administrators set up two-step verification before signing in', functi
         ->set('identifier', $user->username)
         ->set('password', 'correct-horse-battery')
         ->call('authenticate')
-        ->assertRedirect(route('login.two-factor.setup'));
+        ->assertRedirect('/admin');
 
-    $this->assertGuest();
+    $this->assertAuthenticatedAs($user);
 });
 
 it('uses one generic message for unknown users and wrong passwords', function () {

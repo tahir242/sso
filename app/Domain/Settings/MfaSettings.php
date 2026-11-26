@@ -5,19 +5,12 @@ namespace App\Domain\Settings;
 use Spatie\LaravelSettings\Settings;
 
 /**
- * Risk-based MFA policy. Admin roles and off-network sign-ins require a second
- * factor; anyone who has enrolled is always challenged (unless the device is
+ * Two-step verification options. Whether a user has it is their own choice;
+ * anyone who has turned it on is challenged at sign-in (unless the device is
  * trusted).
  */
 class MfaSettings extends Settings
 {
-    public bool $required_for_admins;
-
-    public bool $required_off_network;
-
-    /** @var array<int, string> CIDR ranges treated as the hospital network. */
-    public array $trusted_networks;
-
     /** "Remember this device" lifetime; 0 disables trusted devices. */
     public int $trusted_device_days;
 

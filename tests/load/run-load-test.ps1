@@ -5,8 +5,8 @@
 .DESCRIPTION
   Measures discovery, JWKS, the login page and (optionally) the token
   endpoint. Run it against UAT or production before go-live and after any
-  server change. Keep requests per client under the token endpoint's limit
-  (600 a minute per application).
+  server change. The token endpoint limits only failed client authentication
+  (20 a minute per client and address), so use the correct secret.
 
   For the token test, register a temporary application in the admin console,
   give it only the users.read scope, and pass its client ID; you are asked

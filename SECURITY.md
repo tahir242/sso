@@ -38,5 +38,5 @@ Please give us a reasonable time to release a fix before disclosing the issue pu
 - Point the web server's document root at `public/`, never the project folder.
 - Keep `.env`, `storage/oauth-private.key` and the backup password out of the web root and
   in a password safe.
-- Require two-step verification for administrators (Settings → Two-step verification).
+- Ask administrators to turn on two-step verification for their own accounts (Account → Security).
 - Run `php artisan sso:check` after every change and keep PHP and SQL Server patched.

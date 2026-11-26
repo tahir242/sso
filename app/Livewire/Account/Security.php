@@ -7,7 +7,6 @@ use App\Domain\Identity\Actions\ChangePassword;
 use App\Domain\Identity\Actions\DisableTwoFactor;
 use App\Domain\Identity\Actions\EnableTwoFactor;
 use App\Domain\Identity\Enums\AuthSource;
-use App\Domain\Identity\Mfa\MfaPolicy;
 use App\Domain\Identity\Mfa\RecoveryCodes;
 use App\Domain\Identity\Mfa\TotpAuthenticator;
 use App\Domain\Identity\Mfa\TrustedDeviceManager;
@@ -75,10 +74,8 @@ class Security extends Component
         $this->newRecoveryCodes = $recoveryCodes->regenerate($this->user());
     }
 
-    public function disableTwoFactor(TotpAuthenticator $totp, MfaPolicy $policy, DisableTwoFactor $disable): void
+    public function disableTwoFactor(TotpAuthenticator $totp, DisableTwoFactor $disable): void
     {
-        abort_unless($policy->canDisable($this->user()), 403);
-
         $this->requireCurrentCode($totp);
 
         $disable->handle($this->user());
@@ -124,15 +121,13 @@ class Security extends Component
         session()->flash('password-status', __('Password changed. Other sessions were signed out.'));
     }
 
-    public function render(TotpAuthenticator $totp, MfaPolicy $policy, RecoveryCodes $recoveryCodes): View
+    public function render(TotpAuthenticator $totp, RecoveryCodes $recoveryCodes): View
     {
         $user = $this->user();
         $secret = session(self::SETUP_SECRET);
 
         return view('livewire.account.security', [
             'user' => $user,
-            'mfaRequired' => $policy->isRequired($user, (string) request()->ip()),
-            'canDisableMfa' => $policy->canDisable($user),
             'recoveryCodesLeft' => $recoveryCodes->remaining($user),
             'qrCode' => $this->settingUp && $secret ? $totp->qrCodeSvg($user, $secret) : null,
             'secret' => $this->settingUp && $secret ? trim(chunk_split($secret, 4, ' ')) : null,

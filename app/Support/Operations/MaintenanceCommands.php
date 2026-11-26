@@ -101,7 +101,7 @@ final class MaintenanceCommands
 
             // Housekeeping
             'passport-purge' => ['group' => 'Housekeeping', 'label' => 'Purge expired tokens', 'command' => 'passport:purge', 'class' => PurgeCommand::class, 'parameters' => [], 'description' => 'Deletes revoked and expired access tokens, refresh tokens and authorization codes.'],
-            'model-prune' => ['group' => 'Housekeeping', 'label' => 'Prune old records', 'command' => 'model:prune', 'parameters' => [], 'description' => 'Runs the retention rules defined on the models.'],
+            'sso-prune' => ['group' => 'Housekeeping', 'label' => 'Prune old records', 'command' => 'sso:prune', 'parameters' => [], 'description' => 'Deletes application sessions 30 days after sign-out, sign-in events and change history older than a year, read notifications older than 90 days, expired remembered computers and failed jobs older than 30 days. Runs nightly at 01:00 anyway.'],
             'auth-clear-resets' => ['group' => 'Housekeeping', 'label' => 'Delete expired password-reset links', 'command' => 'auth:clear-resets', 'parameters' => [], 'description' => 'Removes expired reset tokens.'],
             'backup' => [
                 'group' => 'Housekeeping',

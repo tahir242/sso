@@ -111,20 +111,16 @@ class Login extends Component
 
         match ($mfa->nextStep($user, request())) {
             LoginStep::Complete => $this->redirect($completeLogin->handle($user, mfaVerified: false)),
-            LoginStep::ChallengeMfa => $this->continueTo('login.two-factor', $user),
-            LoginStep::EnrolMfa => $this->continueTo('login.two-factor.setup', $user),
+            LoginStep::ChallengeMfa => $this->challenge($user),
         };
     }
 
-    private function continueTo(string $route, User $user): void
+    private function challenge(User $user): void
     {
         PendingLogin::start($user);
+        AuthEvent::record(AuthEventType::MfaChallenged, $user);
 
-        if ($route === 'login.two-factor') {
-            AuthEvent::record(AuthEventType::MfaChallenged, $user);
-        }
-
-        $this->redirectRoute($route);
+        $this->redirectRoute('login.two-factor');
     }
 
     public function render(LoginGreeting $greeting, GeneralSettings $settings): View

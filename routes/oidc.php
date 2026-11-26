@@ -5,6 +5,7 @@ use App\Http\Controllers\Oidc\EndSessionController;
 use App\Http\Controllers\Oidc\JwksController;
 use App\Http\Controllers\Oidc\UserInfoController;
 use App\Http\Middleware\AuthorizeApplicationAccess;
+use App\Http\Middleware\ThrottleFailedClientAuthentication;
 use Illuminate\Support\Facades\Route;
 use Laravel\Passport\Http\Controllers\AccessTokenController;
 use Laravel\Passport\Http\Controllers\AuthorizationController;
@@ -23,7 +24,7 @@ Route::get('/oauth/authorize', [AuthorizationController::class, 'authorize'])
     ->name('passport.authorizations.authorize');
 
 Route::post('/oauth/token', [AccessTokenController::class, 'issueToken'])
-    ->middleware('throttle:oauth-token')
+    ->middleware(ThrottleFailedClientAuthentication::class)
     ->name('passport.token');
 
 Route::match(['get', 'post'], '/oauth/userinfo', UserInfoController::class)

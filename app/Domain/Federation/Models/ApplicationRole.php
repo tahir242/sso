@@ -29,7 +29,6 @@ class ApplicationRole extends Model
         // The pivot FK is NO ACTION (SQL Server cascade-path rules).
         static::deleting(function (self $role): void {
             DB::table('application_role_user')->where('application_role_id', $role->getKey())->delete();
-            DB::table('application_dashboard_role')->where('application_role_id', $role->getKey())->delete();
         });
     }
 

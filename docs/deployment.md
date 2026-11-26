@@ -107,8 +107,62 @@ ServerSignature Off
 ```
 
 - The document root is the **`public`** folder, never the SSO folder itself: `.env`, `storage` and the keys must not be reachable from the browser.
-- If Apache runs PHP through `mod_fcgid`, allow enough PHP processes: `FcgidMaxProcessesPerClass 16`, and a server-wide `FcgidMaxProcesses` that leaves room for the SSO next to the other sites (5 for all sites is far too few).
 - The Windows account Apache runs as needs **write** access to `storage\` and `bootstrap\cache\` (read access is enough everywhere else).
+
+#### PHP through `mod_fcgid` (several PHP versions on one Apache)
+
+When Apache runs PHP 8.4 through `mod_fcgid` (common when other sites on the server need another
+PHP version), the number of PHP processes decides how many requests are handled at once. XAMPP's
+default of 5 for the **whole server** makes every site queue behind the others.
+
+Server-wide, in `httpd.conf`:
+
+```apache
+<IfModule fcgid_module>
+    FcgidIOTimeout 64
+    FcgidConnectTimeout 16
+    FcgidMaxRequestsPerProcess 1000
+    # All PHP processes on the server, for every site together.
+    FcgidMaxProcesses 24
+    FcgidMaxRequestLen 8131072
+</IfModule>
+```
+
+And in the SSO's `<VirtualHost>`, in place of the `<Directory>` block above:
+
+```apache
+    FcgidInitialEnv PHPRC "C:/xampp/php84"
+    # PHP processes for the SSO alone (it may use up to this many of FcgidMaxProcesses).
+    FcgidMaxProcessesPerClass 16
+    # Keep this many SSO processes running when the site is quiet (no slow first requests).
+    FcgidMinProcessesPerClass 4
+    <Directory "C:/xampp/htdocs/sso/public">
+        <FilesMatch "\.php$">
+            SetHandler fcgid-script
+            FcgidWrapper "C:/xampp/php84/php-cgi.exe" .php
+        </FilesMatch>
+        Options +ExecCGI -Indexes +FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+```
+
+- `FcgidMaxProcessesPerClass` (SSO) must be lower than `FcgidMaxProcesses` (whole server), so the
+  other sites keep some processes.
+- Each PHP process uses about 40–60 MB of memory: 24 processes is about 1–1.5 GB at the busiest
+  moment. Raise both values on a server with more memory and CPU cores.
+- Apache stops PHP processes that have been idle for 5 minutes (`FcgidIdleTimeout`). Starting
+  new ones makes the first requests after a quiet period take 1–2 seconds instead of under half
+  a second. `FcgidMinProcessesPerClass 4` keeps at least 4 SSO processes running once they have
+  started, at a cost of about 200 MB of memory.
+- `FcgidInitialEnv PHPRC` makes sure these processes read `C:\xampp\php84\php.ini`, where OPcache
+  is turned on (1.1).
+- Restart Apache after changing any of this, then run the speed test (3.8).
+
+Measured on the test server (`/login`, 20 people at once): with OPcache off and
+`FcgidMaxProcesses 5`, about 4 requests per second with some people waiting up to 47 seconds;
+with OPcache on and `FcgidMaxProcesses 24`, about 45 requests per second with 95% of requests
+under 0.5 seconds.
 
 ### 1.3 SQL Server database (DBA)
 
@@ -264,8 +318,8 @@ nightly backup. Nothing else (no service or worker) is needed.
 ### 3.6 Start and configure
 
 1. Restart Apache.
-2. Open **https://sso.example.com/login** and sign in as `sso.admin`. You will be asked to set
-   up two-step verification with an authenticator app.
+2. Open **https://sso.example.com/login** and sign in as `sso.admin`. Under **Account → Security**, turn on
+   two-step verification with an authenticator app (recommended; each user decides for themselves).
 3. Open **Admin console** (top right) → **Settings** and fill in:
 
 | Settings page | What to set |
@@ -274,7 +328,7 @@ nightly backup. Nothing else (no service or worker) is needed.
 | Mail | SMTP server, sender address; use "Send test email" |
 | Active Directory | Domain controller, base DN, bind account; use "Test saved connection" |
 | Notifications | WhatsApp (Green-API) details, which messages go by which channel; use "Send test WhatsApp" |
-| Two-step verification | Who must use it (administrators at least) |
+| Two-step verification | How long a computer is remembered, name shown in authenticator apps |
 | Sign-in security | Lockout limits, password rules |
 | Sessions | How long people stay signed in |
 | Access requests, Helpdesk | Approval and helpdesk rules |
@@ -390,6 +444,25 @@ Settings.
   `php artisan queue:retry all` sends them again.
 - **Logs:** `storage\logs\laravel-<date>.log` (kept 30 days).
 - **Access reviews:** schedule them in the admin console (Audit → Access reviews).
+
+### Automatic clean-up
+
+Every night the scheduler deletes what the SSO no longer needs, so the database stays small
+however many people use it (in batches, so nothing is locked for long):
+
+| What | Kept for |
+|---|---|
+| Expired and revoked tokens and sign-in codes (`passport:purge`, 01:15) | 7 days after they expire |
+| Application sessions (`sso:prune`, 01:00) | 30 days after sign-out |
+| Sign-in events (Audit → Sign-in activity) | 1 year |
+| Change history (who changed what in the admin console) | 1 year |
+| Read notifications | 90 days (unread ones are kept) |
+| Remembered computers | until they expire |
+| Failed background jobs | 30 days |
+
+To keep audit records longer (for example for an inspection), change the numbers in
+`app\Support\Operations\Retention.php` before the next night, or take a database backup first.
+Run it by hand under Admin console → Maintenance commands → Prune old records.
 
 ---
 

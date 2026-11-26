@@ -54,12 +54,7 @@
                                    :aria-describedby="'app-desc-' + app.id">
                             <span class="grid size-10 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-primary-500 to-primary-800 text-xs font-semibold text-white shadow-sm" x-text="app.initials" aria-hidden="true"></span>
                             <span class="min-w-0 flex-1">
-                                <span class="flex items-center gap-1.5">
-                                    <span class="truncate text-sm font-semibold text-gray-950 dark:text-white" x-text="app.name"></span>
-                                    <template x-if="app.mfa">
-                                        <span class="rounded bg-amber-50 px-1.5 text-[11px] font-medium text-amber-700 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/20" title="Requires two-step verification">2-step</span>
-                                    </template>
-                                </span>
+                                <span class="block truncate text-sm font-semibold text-gray-950 dark:text-white" x-text="app.name"></span>
                                 <span :id="'app-desc-' + app.id" class="mt-0.5 line-clamp-2 block text-xs text-gray-500 dark:text-gray-400" x-text="app.description || 'No description'"></span>
                                 <span class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-500 dark:text-gray-400">
                                     <span x-show="app.everyone" class="font-medium text-sky-700 dark:text-sky-300">Open to everyone — no assignment needed</span>
